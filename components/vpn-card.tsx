@@ -38,6 +38,10 @@ export function VpnCard() {
   const [creating, setCreating] = useState(false)
   const [traffic, setTraffic] = useState<VPNTrafficWs | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const reconnectAttemptsRef = useRef(0)
+  const maxReconnectAttempts = 5
+  const [wsConnected, setWsConnected] = useState(false)
 
   // Fetch VPN status via REST
   const fetchStatus = useCallback(async () => {
@@ -50,17 +54,22 @@ export function VpnCard() {
       setStatusLoading(false)
       return
     }
+
+    console.log("[v0] Fetching VPN status...")
     try {
       const res = await fetch(`${API_URL}/api/openvpn/status`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) {
+        console.log("[v0] VPN status: no config")
         setVpnStatus({ has_config: false, username: null, ip: null })
       } else {
         const data = await res.json()
+        console.log("[v0] VPN status:", data)
         setVpnStatus(data)
       }
-    } catch {
+    } catch (error) {
+      console.error("[v0] Failed to fetch VPN status:", error)
       setVpnStatus({ has_config: false, username: null, ip: null })
     } finally {
       setStatusLoading(false)
@@ -71,49 +80,92 @@ export function VpnCard() {
     fetchStatus()
   }, [fetchStatus])
 
-  // WebSocket for live traffic
+  // WebSocket for live traffic with improved reconnection logic
   useEffect(() => {
-    if (!isPremium || !vpnStatus?.has_config) return
+    if (!isPremium || !vpnStatus?.has_config) {
+      console.log("[v0] VPN WebSocket: not starting (premium:", isPremium, "has_config:", vpnStatus?.has_config, ")")
+      return
+    }
 
     const token = localStorage.getItem("access_token")
-    if (!token) return
+    if (!token) {
+      console.log("[v0] VPN WebSocket: no token found")
+      return
+    }
 
     const wsBase = API_URL.replace(/^http/, "ws")
     const wsUrl = `${wsBase}/api/openvpn/traffic/ws?token=${encodeURIComponent(token)}`
+    let shouldReconnect = true
 
     function connect() {
+      // Check if we've exceeded max reconnection attempts
+      if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
+        console.error("[v0] VPN WebSocket: max reconnection attempts reached")
+        return
+      }
+
+      console.log(`[v0] VPN WebSocket: connecting (attempt ${reconnectAttemptsRef.current + 1})...`)
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws
+
+      ws.onopen = () => {
+        console.log("[v0] VPN WebSocket: connected")
+        setWsConnected(true)
+        reconnectAttemptsRef.current = 0 // Reset on successful connection
+      }
 
       ws.onmessage = (event) => {
         try {
           const data: VPNTrafficWs = JSON.parse(event.data)
+          console.log("[v0] VPN traffic update:", data)
           setTraffic(data)
-        } catch {
-          // ignore parse errors
+        } catch (error) {
+          console.error("[v0] VPN WebSocket: failed to parse message:", error)
         }
       }
 
-      ws.onclose = () => {
-        // Reconnect after a short delay
-        setTimeout(() => {
-          if (wsRef.current === ws) {
+      ws.onclose = (event) => {
+        console.log(`[v0] VPN WebSocket: closed (code: ${event.code}, reason: ${event.reason})`)
+        setWsConnected(false)
+        
+        // Only reconnect if we should and haven't hit the limit
+        if (shouldReconnect && wsRef.current === ws && reconnectAttemptsRef.current < maxReconnectAttempts) {
+          reconnectAttemptsRef.current++
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current - 1), 30000) // Exponential backoff, max 30s
+          console.log(`[v0] VPN WebSocket: reconnecting in ${delay}ms...`)
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
             connect()
-          }
-        }, 5000)
+          }, delay)
+        }
       }
 
-      ws.onerror = () => {
+      ws.onerror = (error) => {
+        console.error("[v0] VPN WebSocket error:", error)
+        setWsConnected(false)
         ws.close()
       }
     }
 
     connect()
 
+    // Cleanup function
     return () => {
-      const ws = wsRef.current
-      wsRef.current = null
-      ws?.close()
+      console.log("[v0] VPN WebSocket: cleaning up...")
+      shouldReconnect = false
+      setWsConnected(false)
+      
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = null
+      }
+      
+      if (wsRef.current) {
+        wsRef.current.close()
+        wsRef.current = null
+      }
+      
+      reconnectAttemptsRef.current = 0
     }
   }, [isPremium, vpnStatus?.has_config])
 

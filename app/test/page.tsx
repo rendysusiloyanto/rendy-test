@@ -68,6 +68,8 @@ function TestContent() {
   }, [steps])
 
   const startTest = useCallback(() => {
+    console.log("[v0] Starting UKK test...")
+    
     // Reset state
     setState("running")
     setSteps([])
@@ -76,17 +78,37 @@ function TestContent() {
 
     // Close existing connection
     if (wsRef.current) {
+      console.log("[v0] Closing existing WebSocket connection...")
       wsRef.current.close()
       wsRef.current = null
     }
 
     const wsBase = API_URL.replace(/^http/, "ws")
-    const ws = new WebSocket(`${wsBase}/api/ukk/test/ws`)
+    const wsUrl = `${wsBase}/api/ukk/test/ws`
+    console.log("[v0] Connecting to:", wsUrl)
+    
+    const ws = new WebSocket(wsUrl)
     wsRef.current = ws
+
+    // Connection timeout - if not opened in 10 seconds, fail
+    const connectionTimeout = setTimeout(() => {
+      if (ws.readyState !== WebSocket.OPEN) {
+        console.error("[v0] WebSocket connection timeout")
+        ws.close()
+        setState("error")
+        setErrorMsg("Connection timeout - unable to reach test server")
+      }
+    }, 10000)
+
+    ws.onopen = () => {
+      console.log("[v0] Test WebSocket: connected successfully")
+      clearTimeout(connectionTimeout)
+    }
 
     ws.onmessage = (event) => {
       try {
         const data: TestResult = JSON.parse(event.data)
+        console.log("[v0] Test message received:", data.type, data)
 
         if (data.type === "progress" && data.step && data.label && data.status) {
           setSteps((prev) => {
@@ -105,6 +127,7 @@ function TestContent() {
             return [...prev, updated]
           })
         } else if (data.type === "result") {
+          console.log("[v0] Test completed with result:", data)
           setFinalResult(data)
           setState("done")
           // Also update steps from results array if provided
@@ -112,33 +135,41 @@ function TestContent() {
             setSteps(data.results)
           }
         } else if (data.type === "error") {
+          console.error("[v0] Test error:", data.message)
           setErrorMsg(data.message || "An unknown error occurred")
           setState("error")
         }
-      } catch {
-        // ignore parse errors
+      } catch (error) {
+        console.error("[v0] Failed to parse test message:", error)
       }
     }
 
-    ws.onclose = () => {
-      if (state === "running") {
-        // Unexpected close
-        setState((prev) => {
-          if (prev === "running") return "error"
-          return prev
-        })
-        setErrorMsg((prev) => prev || "Connection closed unexpectedly")
-      }
+    ws.onclose = (event) => {
+      console.log(`[v0] Test WebSocket closed (code: ${event.code}, reason: ${event.reason})`)
+      clearTimeout(connectionTimeout)
+      
+      setState((prev) => {
+        // Only set error if we were still running (unexpected close)
+        if (prev === "running") {
+          setErrorMsg((prevMsg) => prevMsg || `Connection closed unexpectedly (code: ${event.code})`)
+          return "error"
+        }
+        return prev
+      })
     }
 
-    ws.onerror = () => {
+    ws.onerror = (error) => {
+      console.error("[v0] Test WebSocket error:", error)
+      clearTimeout(connectionTimeout)
       setState("error")
-      setErrorMsg("Failed to connect to the test server")
+      setErrorMsg("Failed to connect to the test server - check your network connection")
       ws.close()
     }
-  }, [state])
+  }, [])
 
   const handleReset = useCallback(() => {
+    console.log("[v0] Resetting test...")
+    
     if (wsRef.current) {
       wsRef.current.close()
       wsRef.current = null
@@ -152,8 +183,11 @@ function TestContent() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      wsRef.current?.close()
-      wsRef.current = null
+      console.log("[v0] Test component unmounting, cleaning up WebSocket...")
+      if (wsRef.current) {
+        wsRef.current.close()
+        wsRef.current = null
+      }
     }
   }, [])
 
