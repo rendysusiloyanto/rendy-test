@@ -389,34 +389,86 @@ export function VpnCard() {
                   )}
                 </div>
 
+                {/* Current Speed */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-secondary p-3">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                      <ArrowDownToLine className="h-3 w-3" />
+                      Download Speed
+                    </div>
+                    <p className="text-sm font-mono font-medium text-foreground">
+                      {traffic.speed_out_kbps != null
+                        ? `${traffic.speed_out_kbps.toFixed(2)} KB/s`
+                        : "--"}
+                    </p>
+                    <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                      {traffic.speed_out_bps != null
+                        ? `${traffic.speed_out_bps.toFixed(0)} B/s`
+                        : "--"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-secondary p-3">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                      <ArrowUpFromLine className="h-3 w-3" />
+                      Upload Speed
+                    </div>
+                    <p className="text-sm font-mono font-medium text-foreground">
+                      {traffic.speed_in_kbps != null
+                        ? `${traffic.speed_in_kbps.toFixed(2)} KB/s`
+                        : "--"}
+                    </p>
+                    <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                      {traffic.speed_in_bps != null
+                        ? `${traffic.speed_in_bps.toFixed(0)} B/s`
+                        : "--"}
+                    </p>
+                  </div>
+                </div>
+
                 {/* Speed Chart */}
                 {speedHistory.length > 0 && (
                   <div className="rounded-lg bg-secondary p-3">
                     <div className="flex items-center gap-2 mb-3">
                       <Activity className="h-4 w-4 text-muted-foreground" />
                       <span className="text-xs font-medium text-foreground">
-                        Network Speed (KB/s)
+                        Network Speed History (KB/s)
                       </span>
                     </div>
-                    <ResponsiveContainer width="100%" height={150}>
+                    <ResponsiveContainer width="100%" height={180}>
                       <LineChart data={speedHistory}>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          opacity={0.3}
+                          stroke="hsl(var(--border))"
+                        />
                         <XAxis
                           dataKey="timestamp"
-                          tick={{ fontSize: 10 }}
+                          tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                          stroke="hsl(var(--border))"
                           interval="preserveStartEnd"
                         />
-                        <YAxis tick={{ fontSize: 10 }} width={30} />
+                        <YAxis
+                          tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                          stroke="hsl(var(--border))"
+                          width={35}
+                        />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: "hsl(var(--card))",
+                            backgroundColor: "hsl(var(--popover))",
                             border: "1px solid hsl(var(--border))",
                             borderRadius: "8px",
                             fontSize: "12px",
+                            color: "hsl(var(--popover-foreground))",
+                          }}
+                          labelStyle={{
+                            color: "hsl(var(--popover-foreground))",
                           }}
                         />
                         <Legend
-                          wrapperStyle={{ fontSize: "11px" }}
+                          wrapperStyle={{
+                            fontSize: "11px",
+                            color: "hsl(var(--foreground))",
+                          }}
                           iconSize={10}
                         />
                         <Line
@@ -426,6 +478,7 @@ export function VpnCard() {
                           strokeWidth={2}
                           name="Download"
                           dot={false}
+                          activeDot={{ r: 4 }}
                         />
                         <Line
                           type="monotone"
@@ -434,6 +487,7 @@ export function VpnCard() {
                           strokeWidth={2}
                           name="Upload"
                           dot={false}
+                          activeDot={{ r: 4 }}
                         />
                       </LineChart>
                     </ResponsiveContainer>
