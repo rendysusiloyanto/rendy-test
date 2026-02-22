@@ -18,8 +18,20 @@ import {
   Lock,
   Globe,
   User,
+  Activity,
+  Clock,
 } from "lucide-react"
 import { toast } from "sonner"
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
@@ -37,6 +49,13 @@ export function VpnCard() {
   const [statusLoading, setStatusLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [traffic, setTraffic] = useState<VPNTrafficWs | null>(null)
+  const [speedHistory, setSpeedHistory] = useState<
+    Array<{
+      timestamp: string
+      downloadKbps: number
+      uploadKbps: number
+    }>
+  >([])
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const reconnectAttemptsRef = useRef(0)
@@ -119,6 +138,26 @@ export function VpnCard() {
           const data: VPNTrafficWs = JSON.parse(event.data)
           console.log("[v0] VPN traffic update:", data)
           setTraffic(data)
+
+          // Update speed history for chart (keep last 20 data points)
+          if (data.speed_out_kbps != null && data.speed_in_kbps != null) {
+            setSpeedHistory((prev) => {
+              const now = new Date().toLocaleTimeString("en-US", {
+                hour12: false,
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              })
+              const newEntry = {
+                timestamp: now,
+                downloadKbps: data.speed_out_kbps!,
+                uploadKbps: data.speed_in_kbps!,
+              }
+              const updated = [...prev, newEntry]
+              // Keep only last 20 data points
+              return updated.slice(-20)
+            })
+          }
         } catch (error) {
           console.error("[v0] VPN WebSocket: failed to parse message:", error)
         }
@@ -314,30 +353,117 @@ export function VpnCard() {
               </div>
             )}
 
-            {/* Live traffic stats */}
+            {/* Connection Details */}
             {isConnected && traffic && (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg bg-secondary p-3">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                    <ArrowDownToLine className="h-3 w-3" />
-                    Download
-                  </div>
-                  <p className="text-sm font-mono font-medium text-foreground">
-                    {traffic.bytes_received != null
-                      ? formatBytes(traffic.bytes_received)
-                      : "--"}
-                  </p>
+              <div className="space-y-3">
+                {/* Connection Info */}
+                <div className="rounded-lg bg-secondary p-3 space-y-1.5">
+                  {traffic.real_ip && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <Globe className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">Real IP:</span>
+                      <span className="font-mono text-foreground">
+                        {traffic.real_ip}
+                      </span>
+                    </div>
+                  )}
+                  {traffic.cipher && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <Lock className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">Cipher:</span>
+                      <span className="font-mono text-foreground">
+                        {traffic.cipher}
+                      </span>
+                    </div>
+                  )}
+                  {traffic.connected_since && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <Clock className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">
+                        Connected Since:
+                      </span>
+                      <span className="font-mono text-foreground">
+                        {traffic.connected_since}
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <div className="rounded-lg bg-secondary p-3">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                    <ArrowUpFromLine className="h-3 w-3" />
-                    Upload
+
+                {/* Speed Chart */}
+                {speedHistory.length > 0 && (
+                  <div className="rounded-lg bg-secondary p-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Activity className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs font-medium text-foreground">
+                        Network Speed (KB/s)
+                      </span>
+                    </div>
+                    <ResponsiveContainer width="100%" height={150}>
+                      <LineChart data={speedHistory}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                        <XAxis
+                          dataKey="timestamp"
+                          tick={{ fontSize: 10 }}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis tick={{ fontSize: 10 }} width={30} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                            fontSize: "12px",
+                          }}
+                        />
+                        <Legend
+                          wrapperStyle={{ fontSize: "11px" }}
+                          iconSize={10}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="downloadKbps"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={2}
+                          name="Download"
+                          dot={false}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="uploadKbps"
+                          stroke="hsl(var(--success))"
+                          strokeWidth={2}
+                          name="Upload"
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
-                  <p className="text-sm font-mono font-medium text-foreground">
-                    {traffic.bytes_sent != null
-                      ? formatBytes(traffic.bytes_sent)
-                      : "--"}
-                  </p>
+                )}
+
+                {/* Total Traffic */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-secondary p-3">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                      <ArrowDownToLine className="h-3 w-3" />
+                      Total Download
+                    </div>
+                    <p className="text-sm font-mono font-medium text-foreground">
+                      {traffic.bytes_sent != null
+                        ? formatBytes(traffic.bytes_sent)
+                        : "--"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-secondary p-3">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                      <ArrowUpFromLine className="h-3 w-3" />
+                      Total Upload
+                    </div>
+                    <p className="text-sm font-mono font-medium text-foreground">
+                      {traffic.bytes_received != null
+                        ? formatBytes(traffic.bytes_received)
+                        : "--"}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
