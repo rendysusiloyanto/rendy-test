@@ -329,211 +329,195 @@ export function VpnCard() {
           </div>
         ) : (
           <>
-            {/* User info */}
-            {(vpnStatus?.username || vpnStatus?.ip) && (
-              <div className="rounded-lg bg-secondary p-3 space-y-1.5">
-                {vpnStatus.username && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <User className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-muted-foreground">Username:</span>
-                    <span className="font-mono text-foreground">
-                      {vpnStatus.username}
-                    </span>
-                  </div>
-                )}
-                {vpnStatus.ip && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <Globe className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-muted-foreground">IP:</span>
-                    <span className="font-mono text-foreground">
-                      {vpnStatus.ip}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Connection Details */}
+            {/* Connection Details - Grid Layout */}
             {isConnected && traffic && (
               <div className="space-y-3">
-                {/* Connection Info */}
-                <div className="rounded-lg bg-secondary p-3 space-y-1.5">
-                  {traffic.real_ip && (
-                    <div className="flex items-center gap-2 text-xs">
-                      <Globe className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-muted-foreground">Real IP:</span>
-                      <span className="font-mono text-foreground">
-                        {traffic.real_ip}
-                      </span>
+                {/* Main Connection Info Grid */}
+                <div className="rounded-lg bg-secondary p-4">
+                  <div className="grid grid-cols-3 gap-x-6 gap-y-3">
+                    {/* Common Name */}
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                        Common Name
+                      </div>
+                      <div className="font-mono text-sm text-foreground">
+                        {vpnStatus?.username || "--"}
+                      </div>
                     </div>
-                  )}
-                  {traffic.cipher && (
-                    <div className="flex items-center gap-2 text-xs">
-                      <Lock className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-muted-foreground">Cipher:</span>
-                      <span className="font-mono text-foreground">
-                        {traffic.cipher}
-                      </span>
-                    </div>
-                  )}
-                  {traffic.connected_since && (
-                    <div className="flex items-center gap-2 text-xs">
-                      <Clock className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        Connected Since:
-                      </span>
-                      <span className="font-mono text-foreground">
-                        {traffic.connected_since}
-                      </span>
-                    </div>
-                  )}
-                </div>
 
-                {/* Current Speed */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-secondary p-3">
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                      <ArrowDownToLine className="h-3 w-3" />
-                      Download Speed
+                    {/* Real IP */}
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                        Real IP
+                      </div>
+                      <div className="font-mono text-sm text-primary">
+                        {traffic.real_ip || "--"}
+                      </div>
                     </div>
-                    <p className="text-sm font-mono font-medium text-foreground">
-                      {traffic.speed_out_kbps != null
-                        ? `${traffic.speed_out_kbps.toFixed(2)} KB/s`
-                        : "--"}
-                    </p>
-                    <p className="text-xs font-mono text-muted-foreground mt-0.5">
-                      {traffic.speed_out_bps != null
-                        ? `${traffic.speed_out_bps.toFixed(0)} B/s`
-                        : "--"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-secondary p-3">
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                      <ArrowUpFromLine className="h-3 w-3" />
-                      Upload Speed
+
+                    {/* Virtual IP */}
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                        Virtual IP
+                      </div>
+                      <div className="font-mono text-sm text-primary">
+                        {vpnStatus?.ip || "--"}
+                      </div>
                     </div>
-                    <p className="text-sm font-mono font-medium text-foreground">
-                      {traffic.speed_in_kbps != null
-                        ? `${traffic.speed_in_kbps.toFixed(2)} KB/s`
-                        : "--"}
-                    </p>
-                    <p className="text-xs font-mono text-muted-foreground mt-0.5">
-                      {traffic.speed_in_bps != null
-                        ? `${traffic.speed_in_bps.toFixed(0)} B/s`
-                        : "--"}
-                    </p>
+
+                    {/* Download Total */}
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                        Download
+                      </div>
+                      <div className="font-mono text-sm text-success">
+                        {traffic.bytes_sent != null
+                          ? formatBytes(traffic.bytes_sent)
+                          : "--"}
+                      </div>
+                    </div>
+
+                    {/* Upload Total */}
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                        Upload
+                      </div>
+                      <div className="font-mono text-sm text-primary">
+                        {traffic.bytes_received != null
+                          ? formatBytes(traffic.bytes_received)
+                          : "--"}
+                      </div>
+                    </div>
+
+                    {/* Connected Since */}
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                        Connected Since
+                      </div>
+                      <div className="font-mono text-xs text-foreground">
+                        {traffic.connected_since || "--"}
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Current Speed - Inline Display */}
+                  <div className="mt-4 pt-3 border-t border-border">
+                    <div className="font-mono text-sm">
+                      <span className="text-success">↓ </span>
+                      <span className="text-success">
+                        {traffic.speed_out_kbps != null
+                          ? `${traffic.speed_out_kbps.toFixed(2)} Kbps`
+                          : "0.00 Kbps"}
+                      </span>
+                      <span className="text-muted-foreground mx-2">|</span>
+                      <span className="text-primary">↑ </span>
+                      <span className="text-primary">
+                        {traffic.speed_in_kbps != null
+                          ? `${traffic.speed_in_kbps.toFixed(2)} Kbps`
+                          : "0.00 Kbps"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Cipher */}
+                  {traffic.cipher && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                        Cipher
+                      </div>
+                      <div className="font-mono text-xs text-foreground">
+                        {traffic.cipher}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Speed Chart */}
                 {speedHistory.length > 0 && (() => {
                   // Calculate dynamic Y-axis domain
                   const allSpeeds = speedHistory.flatMap(h => [h.downloadKbps, h.uploadKbps])
-                  const maxSpeed = Math.max(...allSpeeds, 1) // Minimum 1 to avoid 0
+                  const maxSpeed = Math.max(...allSpeeds, 1)
                   const minSpeed = Math.min(...allSpeeds, 0)
-                  // Add 20% padding to make lines visible
                   const padding = (maxSpeed - minSpeed) * 0.2 || 1
                   const yMin = Math.max(0, minSpeed - padding)
                   const yMax = maxSpeed + padding
                   
                   return (
-                    <div className="rounded-lg bg-secondary p-3">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Activity className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-xs font-medium text-foreground">
-                          Network Speed History (KB/s)
-                        </span>
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium text-foreground">
+                        Grafik traffic (saat VPN aktif)
+                      </h3>
+                      <div className="rounded-lg bg-card/50 border border-border p-3">
+                        <ResponsiveContainer width="100%" height={220}>
+                          <LineChart data={speedHistory}>
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              stroke="hsl(var(--border))"
+                              opacity={0.2}
+                            />
+                            <XAxis
+                              dataKey="timestamp"
+                              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                              stroke="hsl(var(--border))"
+                              interval="preserveStartEnd"
+                            />
+                            <YAxis
+                              domain={[yMin, yMax]}
+                              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                              stroke="hsl(var(--border))"
+                              width={45}
+                              tickFormatter={(value) => `${value.toFixed(2)}`}
+                              label={{
+                                value: "Kbps",
+                                angle: -90,
+                                position: "insideLeft",
+                                style: { fontSize: 10, fill: "hsl(var(--muted-foreground))" },
+                              }}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: "hsl(var(--popover))",
+                                border: "1px solid hsl(var(--border))",
+                                borderRadius: "8px",
+                                fontSize: "12px",
+                                color: "hsl(var(--popover-foreground))",
+                              }}
+                              labelStyle={{
+                                color: "hsl(var(--popover-foreground))",
+                                marginBottom: "4px",
+                              }}
+                              formatter={(value: number) => `${value.toFixed(2)} Kbps`}
+                            />
+                            <Legend
+                              wrapperStyle={{
+                                fontSize: "11px",
+                              }}
+                              iconSize={12}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="downloadKbps"
+                              stroke="#06b6d4"
+                              strokeWidth={2.5}
+                              name="Download"
+                              dot={false}
+                              activeDot={{ r: 4 }}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="uploadKbps"
+                              stroke="#3b82f6"
+                              strokeWidth={2.5}
+                              name="Upload"
+                              dot={false}
+                              activeDot={{ r: 4 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
                       </div>
-                      <ResponsiveContainer width="100%" height={200}>
-                        <LineChart data={speedHistory}>
-                          <CartesianGrid
-                            strokeDasharray="3 3"
-                            stroke="hsl(var(--border))"
-                            opacity={0.5}
-                          />
-                          <XAxis
-                            dataKey="timestamp"
-                            tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                            stroke="hsl(var(--border))"
-                            interval="preserveStartEnd"
-                          />
-                          <YAxis
-                            domain={[yMin, yMax]}
-                            tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                            stroke="hsl(var(--border))"
-                            width={40}
-                            tickFormatter={(value) => value.toFixed(2)}
-                          />
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: "hsl(var(--popover))",
-                              border: "1px solid hsl(var(--border))",
-                              borderRadius: "8px",
-                              fontSize: "12px",
-                              color: "hsl(var(--popover-foreground))",
-                            }}
-                            labelStyle={{
-                              color: "hsl(var(--popover-foreground))",
-                              marginBottom: "4px",
-                            }}
-                            formatter={(value: number) => `${value.toFixed(2)} KB/s`}
-                          />
-                          <Legend
-                            wrapperStyle={{
-                              fontSize: "11px",
-                              color: "hsl(var(--foreground))",
-                            }}
-                            iconSize={12}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="downloadKbps"
-                            stroke="hsl(var(--primary))"
-                            strokeWidth={3}
-                            name="Download"
-                            dot={false}
-                            activeDot={{ r: 5 }}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="uploadKbps"
-                            stroke="hsl(var(--success))"
-                            strokeWidth={3}
-                            name="Upload"
-                            dot={false}
-                            activeDot={{ r: 5 }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
                     </div>
                   )
                 })()}
-
-                {/* Total Traffic */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-secondary p-3">
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                      <ArrowDownToLine className="h-3 w-3" />
-                      Total Download
-                    </div>
-                    <p className="text-sm font-mono font-medium text-foreground">
-                      {traffic.bytes_sent != null
-                        ? formatBytes(traffic.bytes_sent)
-                        : "--"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-secondary p-3">
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                      <ArrowUpFromLine className="h-3 w-3" />
-                      Total Upload
-                    </div>
-                    <p className="text-sm font-mono font-medium text-foreground">
-                      {traffic.bytes_received != null
-                        ? formatBytes(traffic.bytes_received)
-                        : "--"}
-                    </p>
-                  </div>
-                </div>
               </div>
             )}
 
