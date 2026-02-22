@@ -426,73 +426,88 @@ export function VpnCard() {
                 </div>
 
                 {/* Speed Chart */}
-                {speedHistory.length > 0 && (
-                  <div className="rounded-lg bg-secondary p-3">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Activity className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs font-medium text-foreground">
-                        Network Speed History (KB/s)
-                      </span>
+                {speedHistory.length > 0 && (() => {
+                  // Calculate dynamic Y-axis domain
+                  const allSpeeds = speedHistory.flatMap(h => [h.downloadKbps, h.uploadKbps])
+                  const maxSpeed = Math.max(...allSpeeds, 1) // Minimum 1 to avoid 0
+                  const minSpeed = Math.min(...allSpeeds, 0)
+                  // Add 20% padding to make lines visible
+                  const padding = (maxSpeed - minSpeed) * 0.2 || 1
+                  const yMin = Math.max(0, minSpeed - padding)
+                  const yMax = maxSpeed + padding
+                  
+                  return (
+                    <div className="rounded-lg bg-secondary p-3">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Activity className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-xs font-medium text-foreground">
+                          Network Speed History (KB/s)
+                        </span>
+                      </div>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <LineChart data={speedHistory}>
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="hsl(var(--border))"
+                            opacity={0.5}
+                          />
+                          <XAxis
+                            dataKey="timestamp"
+                            tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                            stroke="hsl(var(--border))"
+                            interval="preserveStartEnd"
+                          />
+                          <YAxis
+                            domain={[yMin, yMax]}
+                            tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                            stroke="hsl(var(--border))"
+                            width={40}
+                            tickFormatter={(value) => value.toFixed(2)}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: "hsl(var(--popover))",
+                              border: "1px solid hsl(var(--border))",
+                              borderRadius: "8px",
+                              fontSize: "12px",
+                              color: "hsl(var(--popover-foreground))",
+                            }}
+                            labelStyle={{
+                              color: "hsl(var(--popover-foreground))",
+                              marginBottom: "4px",
+                            }}
+                            formatter={(value: number) => `${value.toFixed(2)} KB/s`}
+                          />
+                          <Legend
+                            wrapperStyle={{
+                              fontSize: "11px",
+                              color: "hsl(var(--foreground))",
+                            }}
+                            iconSize={12}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="downloadKbps"
+                            stroke="hsl(var(--primary))"
+                            strokeWidth={3}
+                            name="Download"
+                            dot={false}
+                            activeDot={{ r: 5 }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="uploadKbps"
+                            stroke="hsl(var(--success))"
+                            strokeWidth={3}
+                            name="Upload"
+                            dot={false}
+                            activeDot={{ r: 5 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
                     </div>
-                    <ResponsiveContainer width="100%" height={180}>
-                      <LineChart data={speedHistory}>
-                        <CartesianGrid
-                          strokeDasharray="3 3"
-                          opacity={0.3}
-                          stroke="hsl(var(--border))"
-                        />
-                        <XAxis
-                          dataKey="timestamp"
-                          tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                          stroke="hsl(var(--border))"
-                          interval="preserveStartEnd"
-                        />
-                        <YAxis
-                          tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                          stroke="hsl(var(--border))"
-                          width={35}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "hsl(var(--popover))",
-                            border: "1px solid hsl(var(--border))",
-                            borderRadius: "8px",
-                            fontSize: "12px",
-                            color: "hsl(var(--popover-foreground))",
-                          }}
-                          labelStyle={{
-                            color: "hsl(var(--popover-foreground))",
-                          }}
-                        />
-                        <Legend
-                          wrapperStyle={{
-                            fontSize: "11px",
-                            color: "hsl(var(--foreground))",
-                          }}
-                          iconSize={10}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="downloadKbps"
-                          stroke="hsl(var(--primary))"
-                          strokeWidth={2}
-                          name="Download"
-                          dot={false}
-                          activeDot={{ r: 4 }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="uploadKbps"
-                          stroke="hsl(var(--success))"
-                          strokeWidth={2}
-                          name="Upload"
-                          dot={false}
-                          activeDot={{ r: 4 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
+                  )
+                })()}
 
                 {/* Total Traffic */}
                 <div className="grid grid-cols-2 gap-3">
