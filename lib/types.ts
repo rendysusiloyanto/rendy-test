@@ -124,9 +124,15 @@ export interface TestResult {
 
 // VPN WebSocket traffic
 export interface VPNTrafficWs {
-  bytes_received: number | null
-  bytes_sent: number | null
+  bytes_received: number | null // Total upload
+  bytes_sent: number | null // Total download
   connected_since: string | null
+  cipher: string | null
+  real_ip: string | null
+  speed_in_bps: number | null // Upload speed in bps
+  speed_in_kbps: number | null // Upload speed in kbps
+  speed_out_bps: number | null // Download speed in bps
+  speed_out_kbps: number | null // Download speed in kbps
 }
 
 // VPN Status (REST)
