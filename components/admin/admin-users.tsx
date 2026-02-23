@@ -134,7 +134,7 @@ export function AdminUsers() {
                       {user.is_blacklisted && (
                         <AlertCircle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
                       )}
-                      {user.role === "admin" && (
+                      {user.role === "ADMIN" && (
                         <Shield className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                       )}
                       {user.is_premium && (
@@ -271,9 +271,9 @@ export function AdminUsers() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="guest">Guest</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="GUEST">Guest</SelectItem>
+                    <SelectItem value="STUDENT">Student</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
