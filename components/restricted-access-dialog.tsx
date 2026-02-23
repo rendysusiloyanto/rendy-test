@@ -34,18 +34,13 @@ export function RestrictedAccessDialog({
 
   const handleRequestAccess = async () => {
     if (!reason.trim()) {
-      toast.error("Please provide a reason for your request")
-      return
-    }
-
-    if (!user?.email) {
-      toast.error("User email not found")
+      toast.error("Please provide a message for your request")
       return
     }
 
     setSubmitting(true)
     try {
-      await api.createAccessRequest(user.email, reason)
+      await api.createAccessRequest(reason)
       setSubmitted(true)
       setReason("")
       toast.success("Access request sent to administrators")
@@ -102,7 +97,7 @@ export function RestrictedAccessDialog({
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-foreground">
-                Reason for access request
+                Message
               </label>
               <Textarea
                 placeholder="Explain why you need access to this feature..."
