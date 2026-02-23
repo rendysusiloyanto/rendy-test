@@ -7,6 +7,7 @@ import type { VPNStatusResponse, VPNTrafficWs } from "@/lib/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { RestrictedAccessDialog } from "@/components/restricted-access-dialog"
 import {
   Shield,
   Download,
@@ -44,11 +45,12 @@ function formatBytes(bytes: number): string {
 }
 
 export function VpnCard() {
-  const { isPremium } = useAuth()
+  const { isPremium, isBlacklisted } = useAuth()
   const [vpnStatus, setVpnStatus] = useState<VPNStatusResponse | null>(null)
   const [statusLoading, setStatusLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [traffic, setTraffic] = useState<VPNTrafficWs | null>(null)
+  const [restrictedDialogOpen, setRestrictedDialogOpen] = useState(false)
   const [speedHistory, setSpeedHistory] = useState<
     Array<{
       timestamp: string
@@ -209,6 +211,11 @@ export function VpnCard() {
   }, [isPremium, vpnStatus?.has_config])
 
   const handleCreate = async () => {
+    if (isBlacklisted) {
+      setRestrictedDialogOpen(true)
+      return
+    }
+
     setCreating(true)
     try {
       await api.createVpnConfig()
@@ -237,6 +244,7 @@ export function VpnCard() {
 
   if (!isPremium) {
     return (
+      <>
       <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base text-foreground">
@@ -261,6 +269,12 @@ export function VpnCard() {
           </div>
         </CardContent>
       </Card>
+      <RestrictedAccessDialog
+        open={restrictedDialogOpen}
+        onOpenChange={setRestrictedDialogOpen}
+        featureName="VPN Access"
+      />
+      </>
     )
   }
 
@@ -278,6 +292,7 @@ export function VpnCard() {
   const isConnected = traffic?.connected_since != null
 
   return (
+    <>
     <Card className="border-border bg-card">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
@@ -553,5 +568,11 @@ export function VpnCard() {
         )}
       </CardContent>
     </Card>
+    <RestrictedAccessDialog
+      open={restrictedDialogOpen}
+      onOpenChange={setRestrictedDialogOpen}
+      featureName="VPN Access"
+    />
+    </>
   )
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useCallback, useEffect } from "react"
+import { useAuth } from "@/lib/auth-context"
 import { AppShell } from "@/components/app-shell"
 import { AuthGuard } from "@/components/auth-guard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { RestrictedAccessDialog } from "@/components/restricted-access-dialog"
 import {
   FlaskConical,
   Play,
@@ -20,6 +22,7 @@ import {
   RotateCcw,
   Plus,
   X,
+  AlertCircle,
 } from "lucide-react"
 import type { TestResult, TestStep } from "@/lib/types"
 
@@ -144,10 +147,12 @@ function StepStatusIcon({ status }: { status: string }) {
 }
 
 function TestContent() {
+  const { isBlacklisted } = useAuth()
   const [state, setState] = useState<TestState>("idle")
   const [steps, setSteps] = useState<TestStep[]>([])
   const [finalResult, setFinalResult] = useState<TestResult | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [restrictedDialogOpen, setRestrictedDialogOpen] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
   const stepsEndRef = useRef<HTMLDivElement>(null)
 
@@ -373,6 +378,47 @@ function TestContent() {
 
   const passCount = steps.filter((s) => s.status === "pass").length
   const failCount = steps.filter((s) => s.status === "fail").length
+
+  if (isBlacklisted) {
+    return (
+      <AppShell>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">UKK Test Service</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Test your Proxmox, Ubuntu, WordPress, and DNS configuration
+            </p>
+          </div>
+
+          <Card className="border-destructive/20 bg-destructive/5">
+            <CardContent className="flex flex-col items-center gap-4 py-12">
+              <AlertCircle className="h-12 w-12 text-destructive" />
+              <div className="text-center space-y-2">
+                <p className="text-lg font-semibold text-foreground">
+                  Access Restricted
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Your account is currently restricted from accessing test service
+                </p>
+              </div>
+              <button
+                onClick={() => setRestrictedDialogOpen(true)}
+                className="mt-4 px-6 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
+              >
+                Request Access
+              </button>
+            </CardContent>
+          </Card>
+
+          <RestrictedAccessDialog
+            open={restrictedDialogOpen}
+            onOpenChange={setRestrictedDialogOpen}
+            featureName="Test Service"
+          />
+        </div>
+      </AppShell>
+    )
+  }
 
   return (
     <AppShell>

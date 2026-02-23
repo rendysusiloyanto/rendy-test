@@ -2,23 +2,28 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useAuth } from "@/lib/auth-context"
 import { api } from "@/lib/api"
 import type { LearningResponse } from "@/lib/types"
 import { AppShell } from "@/components/app-shell"
 import { AuthGuard } from "@/components/auth-guard"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { RestrictedAccessDialog } from "@/components/restricted-access-dialog"
 import {
   BookOpen,
   Play,
   Loader2,
   Calendar,
+  AlertCircle,
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 
 function LearningListContent() {
+  const { isBlacklisted } = useAuth()
   const [learnings, setLearnings] = useState<LearningResponse[]>([])
   const [loading, setLoading] = useState(true)
+  const [restrictedDialogOpen, setRestrictedDialogOpen] = useState(false)
 
   useEffect(() => {
     api
@@ -27,6 +32,47 @@ function LearningListContent() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  if (isBlacklisted) {
+    return (
+      <AppShell>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Learning</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Tutorial videos to help you prepare for the competency exam
+            </p>
+          </div>
+
+          <Card className="border-destructive/20 bg-destructive/5">
+            <CardContent className="flex flex-col items-center gap-4 py-12">
+              <AlertCircle className="h-12 w-12 text-destructive" />
+              <div className="text-center space-y-2">
+                <p className="text-lg font-semibold text-foreground">
+                  Access Restricted
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Your account is currently restricted from accessing learning materials
+                </p>
+              </div>
+              <button
+                onClick={() => setRestrictedDialogOpen(true)}
+                className="mt-4 px-6 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
+              >
+                Request Access
+              </button>
+            </CardContent>
+          </Card>
+
+          <RestrictedAccessDialog
+            open={restrictedDialogOpen}
+            onOpenChange={setRestrictedDialogOpen}
+            featureName="Learning"
+          />
+        </div>
+      </AppShell>
+    )
+  }
 
   return (
     <AppShell>
