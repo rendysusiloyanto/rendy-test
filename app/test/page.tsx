@@ -6,6 +6,8 @@ import { AuthGuard } from "@/components/auth-guard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   FlaskConical,
   Play,
@@ -16,12 +18,99 @@ import {
   AlertTriangle,
   Trophy,
   RotateCcw,
+  Plus,
+  X,
 } from "lucide-react"
 import type { TestResult, TestStep } from "@/lib/types"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
 type TestState = "idle" | "running" | "done" | "error"
+
+interface TestConfig {
+  vm_proxmox: {
+    inputs: {
+      name: string
+      host: string
+      user: string
+      password: string
+    }
+    expected: {
+      resources: {
+        cores: number
+        memory: number
+        disk_size: string
+      }
+      vm_status: string
+      vm_access: boolean
+    }
+  }
+  vm_ubuntu: {
+    inputs: {
+      name: string
+      host: string
+      user: string
+      password: string
+    }
+    expected: {
+      resources: {
+        cores: number
+        memory: number
+        disk_size: string
+      }
+      vm_status: string
+      vm_access: boolean
+    }
+  }
+  php: {
+    expected: {
+      binary: boolean
+      modules: Record<string, boolean>
+    }
+  }
+  web_server: {
+    expected: {
+      nginx_binary: boolean
+      nginx_service: boolean
+      nginx_config_syntax: boolean
+    }
+  }
+  mysql: {
+    inputs: {
+      db_name: string
+      db_user: string
+      db_password: string
+    }
+    expected: {
+      binary: boolean
+      service: boolean
+      database_exists: boolean
+      user_exists: boolean
+      db_connection: boolean
+    }
+  }
+  wordpress: {
+    inputs: {
+      url: string
+      username: string
+      password: string
+    }
+    expected: {
+      status_code: number
+      login_success: boolean
+    }
+  }
+  dns: {
+    inputs: {
+      domain: string
+      ip: string
+    }
+    expected: {
+      domain: string
+      ip: string
+    }
+  }
+}
 
 function GradeBadge({ grade }: { grade: string }) {
   const colors: Record<string, string> = {
@@ -61,6 +150,69 @@ function TestContent() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const stepsEndRef = useRef<HTMLDivElement>(null)
+
+  // Test configuration
+  const [config, setConfig] = useState<TestConfig>({
+    vm_proxmox: {
+      inputs: { name: "", host: "", user: "root", password: "" },
+      expected: {
+        resources: { cores: 6, memory: 8192, disk_size: "32G" },
+        vm_status: "running",
+        vm_access: true,
+      },
+    },
+    vm_ubuntu: {
+      inputs: { name: "", host: "", user: "", password: "" },
+      expected: {
+        resources: { cores: 6, memory: 6144, disk_size: "32G" },
+        vm_status: "running",
+        vm_access: true,
+      },
+    },
+    php: {
+      expected: {
+        binary: true,
+        modules: {
+          mysqli: true,
+          curl: true,
+          gd: true,
+          mbstring: true,
+          xml: true,
+          json: true,
+          zip: true,
+          openssl: true,
+        },
+      },
+    },
+    web_server: {
+      expected: {
+        nginx_binary: true,
+        nginx_service: true,
+        nginx_config_syntax: true,
+      },
+    },
+    mysql: {
+      inputs: { db_name: "wordpress", db_user: "", db_password: "" },
+      expected: {
+        binary: true,
+        service: true,
+        database_exists: true,
+        user_exists: true,
+        db_connection: true,
+      },
+    },
+    wordpress: {
+      inputs: { url: "", username: "admin", password: "" },
+      expected: { status_code: 200, login_success: true },
+    },
+    dns: {
+      inputs: { domain: "", ip: "" },
+      expected: { domain: "", ip: "" },
+    },
+  })
+
+  const [phpModules, setPhpModules] = useState<string[]>(Object.keys(config.php.expected.modules))
+  const [newModule, setNewModule] = useState("")
 
   // Auto-scroll to bottom when new steps arrive
   useEffect(() => {
@@ -103,6 +255,34 @@ function TestContent() {
     ws.onopen = () => {
       console.log("[v0] Test WebSocket: connected successfully")
       clearTimeout(connectionTimeout)
+
+      // Send test configuration
+      const phpModulesObj: Record<string, boolean> = {}
+      phpModules.forEach((mod) => {
+        phpModulesObj[mod] = true
+      })
+
+      // Update DNS expected with user inputs
+      const configToSend = {
+        ...config,
+        php: {
+          expected: {
+            binary: true,
+            modules: phpModulesObj,
+          },
+        },
+        dns: {
+          inputs: config.dns.inputs,
+          expected: {
+            domain: config.dns.inputs.domain,
+            ip: config.dns.inputs.ip,
+          },
+        },
+      }
+
+      const payload = { data: configToSend }
+      console.log("[v0] Sending test config:", payload)
+      ws.send(JSON.stringify(payload))
     }
 
     ws.onmessage = (event) => {
@@ -216,24 +396,486 @@ function TestContent() {
           </CardHeader>
           <CardContent>
             {state === "idle" && (
-              <div className="flex flex-col items-center gap-4 py-6">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
-                  <FlaskConical className="h-7 w-7 text-primary" />
+              <div className="space-y-6">
+                {/* Proxmox VM */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Proxmox VM Configuration
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="prox-name" className="text-xs">
+                        VM Name
+                      </Label>
+                      <Input
+                        id="prox-name"
+                        value={config.vm_proxmox.inputs.name}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            vm_proxmox: {
+                              ...config.vm_proxmox,
+                              inputs: {
+                                ...config.vm_proxmox.inputs,
+                                name: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="test-proxmox"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="prox-host" className="text-xs">
+                        Host IP
+                      </Label>
+                      <Input
+                        id="prox-host"
+                        value={config.vm_proxmox.inputs.host}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            vm_proxmox: {
+                              ...config.vm_proxmox,
+                              inputs: {
+                                ...config.vm_proxmox.inputs,
+                                host: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="10.10.10.65"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="prox-user" className="text-xs">
+                        User
+                      </Label>
+                      <Input
+                        id="prox-user"
+                        value={config.vm_proxmox.inputs.user}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            vm_proxmox: {
+                              ...config.vm_proxmox,
+                              inputs: {
+                                ...config.vm_proxmox.inputs,
+                                user: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="root"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="prox-password" className="text-xs">
+                        Password
+                      </Label>
+                      <Input
+                        id="prox-password"
+                        type="text"
+                        value={config.vm_proxmox.inputs.password}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            vm_proxmox: {
+                              ...config.vm_proxmox,
+                              inputs: {
+                                ...config.vm_proxmox.inputs,
+                                password: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="password"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-foreground">
-                    Ready to test your configuration?
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                    This will check your VM setup including Proxmox
-                    virtualization, Ubuntu server, WordPress installation, and
-                    DNS configuration.
-                  </p>
+
+                {/* Ubuntu VM */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Ubuntu VM Configuration
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ubuntu-name" className="text-xs">
+                        VM Name
+                      </Label>
+                      <Input
+                        id="ubuntu-name"
+                        value={config.vm_ubuntu.inputs.name}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            vm_ubuntu: {
+                              ...config.vm_ubuntu,
+                              inputs: {
+                                ...config.vm_ubuntu.inputs,
+                                name: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="jns23-ubuntu"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ubuntu-host" className="text-xs">
+                        Host IP
+                      </Label>
+                      <Input
+                        id="ubuntu-host"
+                        value={config.vm_ubuntu.inputs.host}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            vm_ubuntu: {
+                              ...config.vm_ubuntu,
+                              inputs: {
+                                ...config.vm_ubuntu.inputs,
+                                host: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="10.10.10.20"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ubuntu-user" className="text-xs">
+                        User
+                      </Label>
+                      <Input
+                        id="ubuntu-user"
+                        value={config.vm_ubuntu.inputs.user}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            vm_ubuntu: {
+                              ...config.vm_ubuntu,
+                              inputs: {
+                                ...config.vm_ubuntu.inputs,
+                                user: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="jns23"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ubuntu-password" className="text-xs">
+                        Password
+                      </Label>
+                      <Input
+                        id="ubuntu-password"
+                        type="text"
+                        value={config.vm_ubuntu.inputs.password}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            vm_ubuntu: {
+                              ...config.vm_ubuntu,
+                              inputs: {
+                                ...config.vm_ubuntu.inputs,
+                                password: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="password"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  </div>
                 </div>
+
+                {/* PHP Modules */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    PHP Modules
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {phpModules.map((mod) => (
+                      <Badge
+                        key={mod}
+                        variant="secondary"
+                        className="text-xs font-mono px-2 py-1 flex items-center gap-1.5"
+                      >
+                        {mod}
+                        <button
+                          onClick={() =>
+                            setPhpModules(phpModules.filter((m) => m !== mod))
+                          }
+                          className="hover:text-destructive transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newModule}
+                      onChange={(e) => setNewModule(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newModule.trim()) {
+                          if (!phpModules.includes(newModule.trim())) {
+                            setPhpModules([...phpModules, newModule.trim()])
+                          }
+                          setNewModule("")
+                        }
+                      }}
+                      placeholder="Add module (e.g., exif)"
+                      className="h-9 text-sm"
+                    />
+                    <Button
+                      onClick={() => {
+                        if (
+                          newModule.trim() &&
+                          !phpModules.includes(newModule.trim())
+                        ) {
+                          setPhpModules([...phpModules, newModule.trim()])
+                          setNewModule("")
+                        }
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* MySQL */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    MySQL Configuration
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="mysql-db" className="text-xs">
+                        Database Name
+                      </Label>
+                      <Input
+                        id="mysql-db"
+                        value={config.mysql.inputs.db_name}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            mysql: {
+                              ...config.mysql,
+                              inputs: {
+                                ...config.mysql.inputs,
+                                db_name: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="wordpress"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="mysql-user" className="text-xs">
+                        Database User
+                      </Label>
+                      <Input
+                        id="mysql-user"
+                        value={config.mysql.inputs.db_user}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            mysql: {
+                              ...config.mysql,
+                              inputs: {
+                                ...config.mysql.inputs,
+                                db_user: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="jns23"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="mysql-password" className="text-xs">
+                        Password
+                      </Label>
+                      <Input
+                        id="mysql-password"
+                        type="text"
+                        value={config.mysql.inputs.db_password}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            mysql: {
+                              ...config.mysql,
+                              inputs: {
+                                ...config.mysql.inputs,
+                                db_password: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="password"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* WordPress */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    WordPress Configuration
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="wp-url" className="text-xs">
+                        URL
+                      </Label>
+                      <Input
+                        id="wp-url"
+                        value={config.wordpress.inputs.url}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            wordpress: {
+                              ...config.wordpress,
+                              inputs: {
+                                ...config.wordpress.inputs,
+                                url: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="http://10.10.10.20"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="wp-username" className="text-xs">
+                        Username
+                      </Label>
+                      <Input
+                        id="wp-username"
+                        value={config.wordpress.inputs.username}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            wordpress: {
+                              ...config.wordpress,
+                              inputs: {
+                                ...config.wordpress.inputs,
+                                username: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="admin"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="wp-password" className="text-xs">
+                        Password
+                      </Label>
+                      <Input
+                        id="wp-password"
+                        type="text"
+                        value={config.wordpress.inputs.password}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            wordpress: {
+                              ...config.wordpress,
+                              inputs: {
+                                ...config.wordpress.inputs,
+                                password: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="password"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* DNS */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    DNS Configuration
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="dns-domain" className="text-xs">
+                        Domain
+                      </Label>
+                      <Input
+                        id="dns-domain"
+                        value={config.dns.inputs.domain}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            dns: {
+                              ...config.dns,
+                              inputs: {
+                                ...config.dns.inputs,
+                                domain: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="ukk-jhuan.net"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="dns-ip" className="text-xs">
+                        IP Address
+                      </Label>
+                      <Input
+                        id="dns-ip"
+                        value={config.dns.inputs.ip}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            dns: {
+                              ...config.dns,
+                              inputs: {
+                                ...config.dns.inputs,
+                                ip: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        placeholder="10.10.10.20"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <Button
                   onClick={startTest}
                   size="lg"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   <Play className="mr-2 h-4 w-4" />
                   Start Test
