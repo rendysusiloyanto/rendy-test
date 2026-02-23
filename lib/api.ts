@@ -239,11 +239,11 @@ class ApiClient {
   }
 
   // Access Requests
-  async createAccessRequest(email: string, reason: string): Promise<AccessRequest> {
-    return this.request("/api/request-access", {
+  async createAccessRequest(message: string): Promise<AccessRequest> {
+    return this.request("https://ukk-api.jns23.cloud/api/request-access", {
       method: "POST",
-      headers: this.headers(),
-      body: JSON.stringify({ email, reason }),
+      headers: this.headers(true),
+      body: JSON.stringify({ message }),
     })
   }
 

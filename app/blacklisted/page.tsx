@@ -14,21 +14,21 @@ import { toast } from "sonner"
 
 function BlacklistedContent() {
   const { user } = useAuth()
-  const [reason, setReason] = useState("")
+  const [message, setMessage] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
   const handleRequestAccess = async () => {
-    if (!reason.trim()) {
-      toast.error("Please provide a reason for your request")
+    if (!message.trim()) {
+      toast.error("Please provide a message for your request")
       return
     }
 
     setSubmitting(true)
     try {
-      await api.createAccessRequest(user?.email || "", reason)
+      await api.createAccessRequest(message)
       setSubmitted(true)
-      setReason("")
+      setMessage("")
       toast.success("Access request sent to administrators")
       setTimeout(() => {
         setSubmitted(false)
@@ -91,16 +91,15 @@ function BlacklistedContent() {
               </p>
 
               <div className="space-y-3">
-                <Label htmlFor="reason" className="text-sm font-medium">
-                  Reason for Access Request
+                <Label htmlFor="message" className="text-sm font-medium">
+                  Message
                 </Label>
                 <Textarea
-                  id="reason"
+                  id="message"
                   placeholder="Explain why you should have access to the platform..."
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  disabled={submitting || submitted}
-                  className="min-h-32 resize-none"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="min-h-[120px]"
                 />
               </div>
 
@@ -113,11 +112,11 @@ function BlacklistedContent() {
                 </div>
               )}
 
-              <Button
-                onClick={handleRequestAccess}
-                disabled={submitting || submitted || !reason.trim()}
-                className="w-full"
-              >
+                <Button
+                  onClick={handleRequestAccess}
+                  disabled={submitting || !message.trim()}
+                  className="w-full"
+                >
                 {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -8,13 +8,11 @@ import { Loader2, Server } from "lucide-react"
 export function AuthGuard({
   children,
   requireAdmin = false,
-  allowBlacklisted = false,
 }: {
   children: ReactNode
   requireAdmin?: boolean
-  allowBlacklisted?: boolean
 }) {
-  const { user, loading, isAdmin, isBlacklisted } = useAuth()
+  const { user, loading, isAdmin } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
@@ -24,10 +22,7 @@ export function AuthGuard({
     if (!loading && requireAdmin && !isAdmin) {
       router.push("/dashboard")
     }
-    if (!loading && user && isBlacklisted && !allowBlacklisted) {
-      router.push("/blacklisted")
-    }
-  }, [loading, user, isAdmin, isBlacklisted, requireAdmin, allowBlacklisted, router])
+  }, [loading, user, isAdmin, requireAdmin, router])
 
   if (loading) {
     return (
@@ -42,7 +37,6 @@ export function AuthGuard({
 
   if (!user) return null
   if (requireAdmin && !isAdmin) return null
-  if (isBlacklisted && !allowBlacklisted) return null
 
   return <>{children}</>
 }
