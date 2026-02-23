@@ -16,6 +16,7 @@ import {
   Sheet,
   SheetContent,
   SheetTrigger,
+  SheetTitle,
 } from "@/components/ui/sheet"
 import {
   LayoutDashboard,
@@ -127,6 +128,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 bg-background border-border p-4">
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <div className="flex items-center gap-2 mb-6">
                 <Server className="h-5 w-5 text-primary" />
                 <span className="font-mono text-sm font-bold text-foreground">

@@ -6,7 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AdminNodes } from "@/components/admin/admin-nodes"
 import { AdminLearning } from "@/components/admin/admin-learning"
 import { AdminAnnouncements } from "@/components/admin/admin-announcements"
-import { Server, BookOpen, Megaphone } from "lucide-react"
+import { AdminUsers } from "@/components/admin/admin-users"
+import { Server, BookOpen, Megaphone, Users } from "lucide-react"
 
 function AdminContent() {
   return (
@@ -19,8 +20,15 @@ function AdminContent() {
           </p>
         </div>
 
-        <Tabs defaultValue="nodes">
+        <Tabs defaultValue="users">
           <TabsList className="bg-secondary border border-border">
+            <TabsTrigger
+              value="users"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground"
+            >
+              <Users className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
             <TabsTrigger
               value="nodes"
               className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground"
@@ -43,6 +51,9 @@ function AdminContent() {
               <span className="hidden sm:inline">Announcements</span>
             </TabsTrigger>
           </TabsList>
+          <TabsContent value="users" className="mt-6">
+            <AdminUsers />
+          </TabsContent>
           <TabsContent value="nodes" className="mt-6">
             <AdminNodes />
           </TabsContent>

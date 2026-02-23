@@ -25,6 +25,14 @@ export interface UserResponse {
   updated_at: string
 }
 
+export interface UserUpdate {
+  full_name?: string
+  class_name?: string | null
+  attendance_number?: string | null
+  role?: string
+  is_premium?: boolean
+}
+
 // OpenVPN types
 export interface VPNStatus {
   has_config: boolean
