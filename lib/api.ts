@@ -10,6 +10,7 @@ import type {
   LearningUpdate,
   LearningResponse,
   AnnouncementResponse,
+  AccessRequest,
 } from "./types"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ""
@@ -233,6 +234,35 @@ class ApiClient {
   async deleteUser(userId: string): Promise<void> {
     await this.request(`/api/users/${userId}`, {
       method: "DELETE",
+      headers: this.headers(true),
+    })
+  }
+
+  // Access Requests
+  async listAccessRequests(): Promise<AccessRequest[]> {
+    return this.request("/api/access-requests", {
+      headers: this.headers(true),
+    })
+  }
+
+  async createAccessRequest(reason: string): Promise<AccessRequest> {
+    return this.request("/api/access-requests", {
+      method: "POST",
+      headers: this.headers(true),
+      body: JSON.stringify({ reason }),
+    })
+  }
+
+  async approveAccessRequest(requestId: string): Promise<AccessRequest> {
+    return this.request(`/api/access-requests/${requestId}/approve`, {
+      method: "POST",
+      headers: this.headers(true),
+    })
+  }
+
+  async denyAccessRequest(requestId: string): Promise<AccessRequest> {
+    return this.request(`/api/access-requests/${requestId}/deny`, {
+      method: "POST",
       headers: this.headers(true),
     })
   }

@@ -20,6 +20,7 @@ export interface UserResponse {
   attendance_number: string | null
   role: string
   is_premium: boolean
+  is_blacklisted: boolean
   id: string
   created_at: string
   updated_at: string
@@ -31,6 +32,19 @@ export interface UserUpdate {
   attendance_number?: string | null
   role?: string
   is_premium?: boolean
+  is_blacklisted?: boolean
+}
+
+// Access Request types
+export interface AccessRequest {
+  id: string
+  user_id: string
+  user_email: string
+  user_full_name: string
+  reason: string
+  status: 'pending' | 'approved' | 'denied'
+  created_at: string
+  updated_at: string
 }
 
 // OpenVPN types

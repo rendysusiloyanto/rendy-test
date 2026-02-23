@@ -19,6 +19,7 @@ interface AuthContextType {
   refreshUser: () => Promise<void>
   isAdmin: boolean
   isPremium: boolean
+  isBlacklisted: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -78,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refreshUser,
         isAdmin: user?.role?.toLowerCase() === "admin",
         isPremium: user?.is_premium ?? false,
+        isBlacklisted: user?.is_blacklisted ?? false,
       }}
     >
       {children}
