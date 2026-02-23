@@ -37,7 +37,7 @@ export function AdminUsers() {
   const fetchUsers = async () => {
     setLoading(true)
     try {
-      const data = await api.get<UserResponse[]>("/api/users")
+      const data = await api.listUsers()
       setUsers(data)
     } catch (error) {
       console.error("[v0] Failed to fetch users:", error)
@@ -68,10 +68,7 @@ export function AdminUsers() {
 
     setSaving(true)
     try {
-      const updated = await api.patch<UserResponse>(
-        `/api/users/${editingUser.id}`,
-        editForm
-      )
+      const updated = await api.updateUser(editingUser.id, editForm)
       setUsers(users.map((u) => (u.id === updated.id ? updated : u)))
       toast.success("User updated successfully")
       setEditDialogOpen(false)
