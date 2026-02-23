@@ -224,7 +224,7 @@ class ApiClient {
 
   async updateUser(userId: string, data: Partial<UserResponse>): Promise<UserResponse> {
     return this.request(`/api/users/${userId}`, {
-      method: "PUT",
+      method: "PATCH",
       headers: this.headers(true),
       body: JSON.stringify(data),
     })
