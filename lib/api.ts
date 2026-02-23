@@ -214,6 +214,28 @@ class ApiClient {
     const token = this.getToken()
     return `${API_BASE}/api/announcements/${id}/attachment${token ? `?token=${token}` : ""}`
   }
+
+  // User Management
+  async listUsers(): Promise<UserResponse[]> {
+    return this.request("/api/users", {
+      headers: this.headers(true),
+    })
+  }
+
+  async updateUser(userId: string, data: Partial<UserResponse>): Promise<UserResponse> {
+    return this.request(`/api/users/${userId}`, {
+      method: "PUT",
+      headers: this.headers(true),
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    await this.request(`/api/users/${userId}`, {
+      method: "DELETE",
+      headers: this.headers(true),
+    })
+  }
 }
 
 export class ApiError extends Error {
