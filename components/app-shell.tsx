@@ -100,6 +100,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout, isAdmin } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  console.log("[v0] AppShell - isAdmin:", isAdmin, "user role:", user?.role)
+
   const handleLogout = () => {
     logout()
     router.push("/login")
