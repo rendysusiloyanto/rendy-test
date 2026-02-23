@@ -22,7 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Users, Pencil, Loader2, Search, Crown, Shield } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Users, Pencil, Loader2, Search, Crown, Shield, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 
 export function AdminUsers() {
@@ -122,7 +123,7 @@ export function AdminUsers() {
       ) : (
         <div className="grid gap-3">
           {filteredUsers.map((user) => (
-            <Card key={user.id} className="bg-secondary border-border">
+            <Card key={user.id} className={`border-border ${user.is_blacklisted ? "bg-destructive/5 border-destructive/20" : "bg-secondary"}`}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
@@ -130,7 +131,10 @@ export function AdminUsers() {
                       <h3 className="text-sm font-semibold text-foreground truncate">
                         {user.full_name}
                       </h3>
-                      {user.role === "admin" && (
+                      {user.is_blacklisted && (
+                        <AlertCircle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+                      )}
+                      {user.role === "ADMIN" && (
                         <Shield className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                       )}
                       {user.is_premium && (
@@ -169,6 +173,14 @@ export function AdminUsers() {
                           className="text-[10px] font-mono px-1.5 py-0 border-warning text-warning"
                         >
                           premium
+                        </Badge>
+                      )}
+                      {user.is_blacklisted && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-mono px-1.5 py-0 border-destructive text-destructive"
+                        >
+                          blacklisted
                         </Badge>
                       )}
                     </div>
@@ -259,9 +271,9 @@ export function AdminUsers() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="guest">Guest</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="GUEST">Guest</SelectItem>
+                    <SelectItem value="STUDENT">Student</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -284,6 +296,22 @@ export function AdminUsers() {
                     <SelectItem value="true">Premium</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                <Label htmlFor="edit-blacklist" className="text-xs cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-destructive" />
+                    <span className="font-medium text-destructive">Blacklist User</span>
+                  </div>
+                </Label>
+                <Switch
+                  id="edit-blacklist"
+                  checked={editForm.is_blacklisted ?? false}
+                  onCheckedChange={(checked) =>
+                    setEditForm({ ...editForm, is_blacklisted: checked })
+                  }
+                />
               </div>
 
               <div className="flex gap-2 pt-2">

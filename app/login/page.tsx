@@ -32,7 +32,13 @@ export default function LoginPage() {
       router.push("/dashboard")
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error(err.status === 401 ? "Invalid email or password" : err.message)
+        if (err.status === 401) {
+          toast.error("Invalid email or password")
+        } else if (err.status === 422 && err.body?.detail?.some((e: any) => e.type === "enum")) {
+          toast.error("Invalid role. Please contact support.")
+        } else {
+          toast.error(err.message)
+        }
       } else {
         toast.error("Login failed. Please try again.")
       }

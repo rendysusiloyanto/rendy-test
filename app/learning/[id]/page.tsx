@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth-context"
 import { api } from "@/lib/api"
 import type { LearningResponse } from "@/lib/types"
 import { AppShell } from "@/components/app-shell"
@@ -9,7 +10,8 @@ import { AuthGuard } from "@/components/auth-guard"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Calendar, Loader2, ExternalLink } from "lucide-react"
+import { RestrictedAccessDialog } from "@/components/restricted-access-dialog"
+import { ArrowLeft, Calendar, Loader2, ExternalLink, AlertCircle } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 
 function getYouTubeEmbedUrl(url: string): string | null {
@@ -34,9 +36,57 @@ function getYouTubeEmbedUrl(url: string): string | null {
 }
 
 function LearningDetailContent({ id }: { id: string }) {
+  const { isBlacklisted } = useAuth()
   const [learning, setLearning] = useState<LearningResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [restrictedDialogOpen, setRestrictedDialogOpen] = useState(false)
   const router = useRouter()
+
+  if (isBlacklisted) {
+    return (
+      <AppShell>
+        <div className="space-y-6">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/learning")}
+              className="hover:bg-secondary"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </div>
+
+          <Card className="border-destructive/20 bg-destructive/5">
+            <CardContent className="flex flex-col items-center gap-4 py-12">
+              <AlertCircle className="h-12 w-12 text-destructive" />
+              <div className="text-center space-y-2">
+                <p className="text-lg font-semibold text-foreground">
+                  Access Restricted
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Your account is currently restricted from accessing this learning material
+                </p>
+              </div>
+              <button
+                onClick={() => setRestrictedDialogOpen(true)}
+                className="mt-4 px-6 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-sm font-medium"
+              >
+                Request Access
+              </button>
+            </CardContent>
+          </Card>
+
+          <RestrictedAccessDialog
+            open={restrictedDialogOpen}
+            onOpenChange={setRestrictedDialogOpen}
+            featureName="Learning"
+          />
+        </div>
+      </AppShell>
+    )
+  }
 
   useEffect(() => {
     api

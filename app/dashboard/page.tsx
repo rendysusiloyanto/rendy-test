@@ -5,6 +5,7 @@ import { AppShell } from "@/components/app-shell"
 import { AuthGuard } from "@/components/auth-guard"
 import { VpnCard } from "@/components/vpn-card"
 import { AnnouncementsList } from "@/components/announcements-list"
+import { BlacklistedUserAlert } from "@/components/blacklisted-user-alert"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
@@ -23,6 +24,7 @@ function DashboardContent() {
 
   return (
     <AppShell>
+      <BlacklistedUserAlert />
       <div className="space-y-6">
         {/* Welcome header */}
         <div>

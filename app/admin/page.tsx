@@ -7,7 +7,8 @@ import { AdminNodes } from "@/components/admin/admin-nodes"
 import { AdminLearning } from "@/components/admin/admin-learning"
 import { AdminAnnouncements } from "@/components/admin/admin-announcements"
 import { AdminUsers } from "@/components/admin/admin-users"
-import { Server, BookOpen, Megaphone, Users } from "lucide-react"
+import { AdminAccessRequests } from "@/components/admin/admin-access-requests"
+import { Server, BookOpen, Megaphone, Users, Clock } from "lucide-react"
 
 function AdminContent() {
   return (
@@ -28,6 +29,13 @@ function AdminContent() {
             >
               <Users className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="access-requests"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground"
+            >
+              <Clock className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Access Requests</span>
             </TabsTrigger>
             <TabsTrigger
               value="nodes"
@@ -53,6 +61,9 @@ function AdminContent() {
           </TabsList>
           <TabsContent value="users" className="mt-6">
             <AdminUsers />
+          </TabsContent>
+          <TabsContent value="access-requests" className="mt-6">
+            <AdminAccessRequests />
           </TabsContent>
           <TabsContent value="nodes" className="mt-6">
             <AdminNodes />
