@@ -26,7 +26,7 @@ function BlacklistedContent() {
 
     setSubmitting(true)
     try {
-      await api.createAccessRequest(reason)
+      await api.createAccessRequest(user?.email || "", reason)
       setSubmitted(true)
       setReason("")
       toast.success("Access request sent to administrators")

@@ -239,31 +239,26 @@ class ApiClient {
   }
 
   // Access Requests
-  async listAccessRequests(): Promise<AccessRequest[]> {
-    return this.request("/api/access-requests", {
+  async createAccessRequest(email: string, reason: string): Promise<AccessRequest> {
+    return this.request("/api/request-access", {
+      method: "POST",
+      headers: this.headers(),
+      body: JSON.stringify({ email, reason }),
+    })
+  }
+
+  async listAccessRequests(statusFilter?: string): Promise<AccessRequest[]> {
+    const params = statusFilter ? `?status_filter=${statusFilter}` : ""
+    return this.request(`/api/users/request-access${params}`, {
       headers: this.headers(true),
     })
   }
 
-  async createAccessRequest(reason: string): Promise<AccessRequest> {
-    return this.request("/api/access-requests", {
-      method: "POST",
+  async reviewAccessRequest(requestId: string, action: "APPROVED" | "REJECTED", notes?: string): Promise<AccessRequest> {
+    return this.request(`/api/users/request-access/${requestId}`, {
+      method: "PATCH",
       headers: this.headers(true),
-      body: JSON.stringify({ reason }),
-    })
-  }
-
-  async approveAccessRequest(requestId: string): Promise<AccessRequest> {
-    return this.request(`/api/access-requests/${requestId}/approve`, {
-      method: "POST",
-      headers: this.headers(true),
-    })
-  }
-
-  async denyAccessRequest(requestId: string): Promise<AccessRequest> {
-    return this.request(`/api/access-requests/${requestId}/deny`, {
-      method: "POST",
-      headers: this.headers(true),
+      body: JSON.stringify({ action, notes }),
     })
   }
 }

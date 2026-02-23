@@ -43,7 +43,7 @@ export function AdminAccessRequests() {
   const handleApprove = async (requestId: string) => {
     setActionLoading(true)
     try {
-      const updated = await api.approveAccessRequest(requestId)
+      const updated = await api.reviewAccessRequest(requestId, "APPROVED")
       setRequests(requests.map((r) => (r.id === requestId ? updated : r)))
       toast.success("Access request approved")
       setViewDialogOpen(false)
@@ -58,7 +58,7 @@ export function AdminAccessRequests() {
   const handleDeny = async (requestId: string) => {
     setActionLoading(true)
     try {
-      const updated = await api.denyAccessRequest(requestId)
+      const updated = await api.reviewAccessRequest(requestId, "REJECTED")
       setRequests(requests.map((r) => (r.id === requestId ? updated : r)))
       toast.success("Access request denied")
       setViewDialogOpen(false)
@@ -70,17 +70,17 @@ export function AdminAccessRequests() {
     }
   }
 
-  const pendingRequests = requests.filter((r) => r.status === "pending")
-  const approvedRequests = requests.filter((r) => r.status === "approved")
-  const deniedRequests = requests.filter((r) => r.status === "denied")
+  const pendingRequests = requests.filter((r) => r.status === "PENDING")
+  const approvedRequests = requests.filter((r) => r.status === "APPROVED")
+  const deniedRequests = requests.filter((r) => r.status === "REJECTED")
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "pending":
+      case "PENDING":
         return <Clock className="h-4 w-4 text-yellow-500" />
-      case "approved":
+      case "APPROVED":
         return <CheckCircle className="h-4 w-4 text-green-500" />
-      case "denied":
+      case "REJECTED":
         return <XCircle className="h-4 w-4 text-red-500" />
       default:
         return null
@@ -89,12 +89,12 @@ export function AdminAccessRequests() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "pending":
+      case "PENDING":
         return <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">Pending</Badge>
-      case "approved":
+      case "APPROVED":
         return <Badge variant="outline" className="bg-green-50 text-green-800 border-green-200">Approved</Badge>
-      case "denied":
-        return <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200">Denied</Badge>
+      case "REJECTED":
+        return <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200">Rejected</Badge>
       default:
         return null
     }

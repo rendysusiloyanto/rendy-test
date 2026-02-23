@@ -42,7 +42,7 @@ export interface AccessRequest {
   user_email: string
   user_full_name: string
   reason: string
-  status: 'pending' | 'approved' | 'denied'
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
   created_at: string
   updated_at: string
 }
