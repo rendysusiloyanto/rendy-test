@@ -452,13 +452,13 @@ export function VpnCard() {
                           />
                           <XAxis
                             dataKey="timestamp"
-                            tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                            tick={{ fontSize: 10, fill: "#9ca3af" }}
                             stroke="hsl(var(--border))"
                             interval="preserveStartEnd"
                           />
                           <YAxis
                             domain={[yMin, yMax]}
-                            tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                            tick={{ fontSize: 10, fill: "#9ca3af" }}
                             stroke="hsl(var(--border))"
                             width={40}
                             tickFormatter={(value) => value.toFixed(2)}
