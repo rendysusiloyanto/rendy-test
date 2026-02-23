@@ -38,7 +38,9 @@ class ApiClient {
   }
 
   private async request<T>(url: string, init?: RequestInit): Promise<T> {
-    const res = await fetch(`${API_BASE}${url}`, init)
+    // Handle full URLs (starting with http/https)
+    const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`
+    const res = await fetch(fullUrl, init)
     if (!res.ok) {
       const body = await res.json().catch(() => null)
       throw new ApiError(res.status, body?.detail || res.statusText, body)
