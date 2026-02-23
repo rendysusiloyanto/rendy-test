@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         refreshUser,
-        isAdmin: user?.role === "admin",
+        isAdmin: user?.role?.toLowerCase() === "admin",
         isPremium: user?.is_premium ?? false,
       }}
     >
