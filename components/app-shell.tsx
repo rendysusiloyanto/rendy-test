@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { QrisDisplay } from "@/components/qris-display"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -218,6 +219,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Main content */}
       <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
+
+      {/* QRIS Display */}
+      <QrisDisplay />
     </div>
   )
 }

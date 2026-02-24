@@ -164,6 +164,12 @@ export interface VPNStatusResponse {
   ip: string | null
 }
 
+// Support/QRIS types
+export interface SupportResponse {
+  description: string | null
+  image_url: string | null
+}
+
 // Validation
 export interface ValidationError {
   loc: (string | number)[]

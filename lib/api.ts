@@ -11,6 +11,7 @@ import type {
   LearningResponse,
   AnnouncementResponse,
   AccessRequest,
+  SupportResponse,
 } from "./types"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ""
@@ -262,6 +263,29 @@ class ApiClient {
       headers: this.headers(true),
       body: JSON.stringify({ action, notes }),
     })
+  }
+
+  // Support/QRIS
+  async getSupport(): Promise<SupportResponse> {
+    return this.request("/api/support", {
+      headers: this.headers(),
+    })
+  }
+
+  async updateSupport(description?: string, file?: File): Promise<SupportResponse> {
+    const formData = new FormData()
+    if (description) formData.append("description", description)
+    if (file) formData.append("file", file)
+
+    return this.request("/api/support", {
+      method: "PUT",
+      headers: this.authHeaders(),
+      body: formData,
+    })
+  }
+
+  getSupportImageUrl(): string {
+    return `${API_BASE}/api/support/image`
   }
 }
 
