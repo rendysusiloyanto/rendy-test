@@ -351,7 +351,7 @@ function TestContent() {
       setErrorMsg("Failed to connect to the test server - check your network connection")
       ws.close()
     }
-  }, [])
+  }, [config, phpModules])
 
   const handleReset = useCallback(() => {
     console.log("[v0] Resetting test...")
