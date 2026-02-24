@@ -121,83 +121,75 @@ export function AdminUsers() {
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="grid gap-3">
-          {filteredUsers.map((user) => (
-            <Card key={user.id} className={`border-border ${user.is_blacklisted ? "bg-destructive/5 border-destructive/20" : "bg-secondary"}`}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-sm font-semibold text-foreground truncate">
-                        {user.full_name}
-                      </h3>
-                      {user.is_blacklisted && (
-                        <AlertCircle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
-                      )}
-                      {user.role === "ADMIN" && (
-                        <Shield className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                      )}
-                      {user.is_premium && (
-                        <Crown className="h-3.5 w-3.5 text-warning flex-shrink-0" />
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-2 truncate">
-                      {user.email}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] font-mono px-1.5 py-0"
-                      >
-                        {user.role}
-                      </Badge>
-                      {user.class_name && (
-                        <Badge
-                          variant="secondary"
-                          className="text-[10px] font-mono px-1.5 py-0"
-                        >
-                          {user.class_name}
+        <Card className="border-border bg-card">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 w-40">Name</th>
+                    <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3">Role</th>
+                    <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3">Class</th>
+                    <th className="text-center text-xs font-semibold text-muted-foreground px-4 py-3 w-32">Status</th>
+                    <th className="text-center text-xs font-semibold text-muted-foreground px-4 py-3 w-12">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((user) => (
+                    <tr
+                      key={user.id}
+                      className={`border-b border-border h-12 hover:bg-accent/30 ${
+                        user.is_blacklisted ? "bg-destructive/5" : ""
+                      }`}
+                    >
+                      <td className="px-4 py-3 text-xs font-medium text-foreground">
+                        <div className="flex items-center gap-2">
+                          {user.is_blacklisted && (
+                            <AlertCircle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+                          )}
+                          {user.full_name}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant="outline" className="text-[10px] font-mono">
+                          {user.role}
                         </Badge>
-                      )}
-                      {user.attendance_number && (
-                        <Badge
-                          variant="secondary"
-                          className="text-[10px] font-mono px-1.5 py-0"
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {user.class_name || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {user.role === "ADMIN" && (
+                            <Shield className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                          )}
+                          {user.is_premium && (
+                            <Crown className="h-3.5 w-3.5 text-warning flex-shrink-0" />
+                          )}
+                          {user.is_blacklisted && (
+                            <Badge variant="outline" className="text-[10px] border-destructive text-destructive px-1.5">
+                              blocked
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(user)}
+                          className="h-7 w-7 p-0"
                         >
-                          #{user.attendance_number}
-                        </Badge>
-                      )}
-                      {user.is_premium && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] font-mono px-1.5 py-0 border-warning text-warning"
-                        >
-                          premium
-                        </Badge>
-                      )}
-                      {user.is_blacklisted && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] font-mono px-1.5 py-0 border-destructive text-destructive"
-                        >
-                          blacklisted
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(user)}
-                    className="flex-shrink-0"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Edit Dialog */}

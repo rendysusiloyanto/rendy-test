@@ -101,120 +101,54 @@ function LeaderboardContent() {
             </CardContent>
           </Card>
         ) : (
-          <>
-            {/* Top 3 cards (mobile & desktop) */}
-            {entries.length >= 1 && (
-              <div className="grid gap-4 sm:grid-cols-3">
-                {entries.slice(0, 3).map((entry) => (
-                  <Card
-                    key={entry.user_id}
-                    className={`border-border bg-card ${
-                      entry.rank === 1 ? "sm:order-2 ring-1 ring-warning/20" : entry.rank === 2 ? "sm:order-1" : "sm:order-3"
-                    }`}
-                  >
-                    <CardContent className="flex flex-col items-center gap-2 py-5">
-                      {getRankDisplay(entry.rank)}
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-foreground">
+          <Card className="border-border bg-card">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border hover:bg-transparent bg-muted/30">
+                      <TableHead className="text-muted-foreground text-xs font-semibold w-12 h-10">Rank</TableHead>
+                      <TableHead className="text-muted-foreground text-xs font-semibold h-10">Name</TableHead>
+                      <TableHead className="text-muted-foreground text-xs font-semibold text-right h-10">Grade</TableHead>
+                      <TableHead className="text-muted-foreground text-xs font-semibold text-right h-10">Score</TableHead>
+                      <TableHead className="text-muted-foreground text-xs font-semibold text-right h-10">Completed</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {entries.map((entry, idx) => (
+                      <TableRow
+                        key={entry.user_id}
+                        className={`border-border h-10 ${
+                          entry.rank === 1 ? "bg-warning/5" : entry.rank === 2 ? "bg-muted-foreground/3" : entry.rank === 3 ? "bg-chart-5/3" : ""
+                        } hover:bg-accent/30`}
+                      >
+                        <TableCell className="text-xs font-semibold py-0 px-4">
+                          {getRankDisplay(entry.rank)}
+                        </TableCell>
+                        <TableCell className="text-xs font-medium text-foreground py-0 px-3">
                           {entry.full_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground font-mono">
-                          {entry.email}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant="outline"
-                          className={`font-mono text-xs ${getGradeColor(entry.grade)}`}
-                        >
-                          {entry.grade}
-                        </Badge>
-                        <span className="text-sm font-mono font-bold text-foreground">
-                          {entry.percentage.toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
-                        <Clock className="h-2.5 w-2.5" />
-                        {format(new Date(entry.completed_at), "dd MMM yyyy HH:mm")}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            {/* Full table */}
-            {entries.length > 3 && (
-              <Card className="border-border bg-card">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base text-foreground">
-                    All Rankings
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-border hover:bg-transparent">
-                          <TableHead className="text-muted-foreground w-16">Rank</TableHead>
-                          <TableHead className="text-muted-foreground">Student</TableHead>
-                          <TableHead className="text-muted-foreground text-right">Score</TableHead>
-                          <TableHead className="text-muted-foreground text-center">Grade</TableHead>
-                          <TableHead className="text-muted-foreground text-right hidden sm:table-cell">
-                            Completed
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {entries.map((entry) => (
-                          <TableRow
-                            key={entry.user_id}
-                            className="border-border hover:bg-accent/50"
+                        </TableCell>
+                        <TableCell className="text-right py-0 px-3">
+                          <Badge
+                            variant="outline"
+                            className={`font-mono text-xs px-2 ${getGradeColor(entry.grade)}`}
                           >
-                            <TableCell>
-                              {getRankDisplay(entry.rank)}
-                            </TableCell>
-                            <TableCell>
-                              <div>
-                                <p className="text-sm font-medium text-foreground">
-                                  {entry.full_name}
-                                </p>
-                                <p className="text-xs text-muted-foreground font-mono">
-                                  {entry.email}
-                                </p>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <span className="text-sm font-mono font-medium text-foreground">
-                                {entry.total_score}/{entry.max_score}
-                              </span>
-                              <span className="text-xs text-muted-foreground ml-1">
-                                ({entry.percentage.toFixed(1)}%)
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge
-                                variant="outline"
-                                className={`font-mono text-xs ${getGradeColor(entry.grade)}`}
-                              >
-                                {entry.grade}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right text-xs text-muted-foreground font-mono hidden sm:table-cell">
-                              {format(
-                                new Date(entry.completed_at),
-                                "dd MMM yyyy HH:mm"
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </>
+                            {entry.grade}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-mono font-semibold text-foreground py-0 px-3">
+                          {entry.percentage.toFixed(1)}%
+                        </TableCell>
+                        <TableCell className="text-right text-xs text-muted-foreground font-mono py-0 px-3 whitespace-nowrap">
+                          {format(new Date(entry.completed_at), "dd MMM HH:mm")}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </AppShell>
