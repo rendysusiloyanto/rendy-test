@@ -21,6 +21,7 @@ import {
   User,
   Activity,
   Clock,
+  AlertCircle,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -45,12 +46,15 @@ function formatBytes(bytes: number): string {
 }
 
 export function VpnCard() {
-  const { isPremium, isBlacklisted } = useAuth()
+  const { isPremium, isBlacklisted, user } = useAuth()
   const [vpnStatus, setVpnStatus] = useState<VPNStatusResponse | null>(null)
   const [statusLoading, setStatusLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [traffic, setTraffic] = useState<VPNTrafficWs | null>(null)
   const [restrictedDialogOpen, setRestrictedDialogOpen] = useState(false)
+  
+  const isGuest = user?.role === "GUEST"
+  const isRestricted = isGuest || isBlacklisted
   const [speedHistory, setSpeedHistory] = useState<
     Array<{
       timestamp: string
@@ -66,7 +70,7 @@ export function VpnCard() {
 
   // Fetch VPN status via REST
   const fetchStatus = useCallback(async () => {
-    if (!isPremium) {
+    if (!isPremium || isRestricted) {
       setStatusLoading(false)
       return
     }
@@ -95,7 +99,7 @@ export function VpnCard() {
     } finally {
       setStatusLoading(false)
     }
-  }, [isPremium])
+  }, [isPremium, isRestricted])
 
   useEffect(() => {
     fetchStatus()
@@ -240,6 +244,33 @@ export function VpnCard() {
     } catch {
       toast.error("Failed to download config")
     }
+  }
+
+  if (isRestricted) {
+    return (
+      <Card className="border-destructive/20 bg-destructive/5">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base text-destructive">
+            <AlertCircle className="h-4 w-4" />
+            VPN Access Restricted
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {isBlacklisted ? "Account Restricted" : "Guest Access Not Allowed"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {isBlacklisted 
+                  ? "Your account is restricted from accessing VPN. Please contact admin for assistance."
+                  : "VPN access is not available for guest accounts. Please contact admin."}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (!isPremium) {

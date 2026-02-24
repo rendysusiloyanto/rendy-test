@@ -133,7 +133,10 @@ class ApiClient {
   // Learning
   async listLearnings(publishedOnly = true): Promise<LearningResponse[]> {
     return this.request(
-      `/api/learning?published_only=${publishedOnly}`
+      `/api/learning?published_only=${publishedOnly}`,
+      {
+        headers: this.headers(true),
+      }
     )
   }
 
