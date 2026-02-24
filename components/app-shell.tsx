@@ -29,6 +29,7 @@ import {
   Server,
   Key,
   FlaskConical,
+  HelpCircle,
 } from "lucide-react"
 import { useState, type ReactNode } from "react"
 
@@ -37,6 +38,7 @@ const navigation = [
   { name: "Learning", href: "/learning", icon: BookOpen },
   { name: "Test", href: "/test", icon: FlaskConical },
   { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
+  { name: "Support", href: "/support", icon: HelpCircle },
 ]
 
 const adminNav = [
