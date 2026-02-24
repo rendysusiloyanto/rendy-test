@@ -147,7 +147,9 @@ class ApiClient {
   }
 
   async getLearning(id: string): Promise<LearningResponse> {
-    return this.request(`/api/learning/${id}`)
+    return this.request(`/api/learning/${id}`, {
+      headers: this.headers(true),
+    })
   }
 
   async createLearning(data: LearningCreate): Promise<LearningResponse> {
@@ -260,11 +262,11 @@ class ApiClient {
     })
   }
 
-  async reviewAccessRequest(requestId: string, action: "APPROVED" | "REJECTED", notes?: string): Promise<AccessRequest> {
+  async reviewAccessRequest(requestId: string, status: "APPROVED" | "REJECTED", message?: string): Promise<AccessRequest> {
     return this.request(`/api/users/request-access/${requestId}`, {
       method: "PATCH",
       headers: this.headers(true),
-      body: JSON.stringify({ action, notes }),
+      body: JSON.stringify({ body: message ?? "", status }),
     })
   }
 

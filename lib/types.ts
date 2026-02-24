@@ -41,10 +41,10 @@ export interface AccessRequest {
   user_id: string
   user_email: string
   user_full_name: string
-  reason: string
+  message: string
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
-  created_at: string
-  updated_at: string
+  requested_at: string
+  reviewed_at: string | null
 }
 
 // OpenVPN types

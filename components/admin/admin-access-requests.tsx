@@ -40,10 +40,10 @@ export function AdminAccessRequests() {
     fetchRequests()
   }, [])
 
-  const handleApprove = async (requestId: string) => {
+  const handleApprove = async (requestId: string, message: string) => {
     setActionLoading(true)
     try {
-      const updated = await api.reviewAccessRequest(requestId, "APPROVED")
+      const updated = await api.reviewAccessRequest(requestId, "APPROVED", message)
       setRequests(requests.map((r) => (r.id === requestId ? updated : r)))
       toast.success("Access request approved")
       setViewDialogOpen(false)
@@ -55,10 +55,10 @@ export function AdminAccessRequests() {
     }
   }
 
-  const handleDeny = async (requestId: string) => {
+  const handleDeny = async (requestId: string, message: string) => {
     setActionLoading(true)
     try {
-      const updated = await api.reviewAccessRequest(requestId, "REJECTED")
+      const updated = await api.reviewAccessRequest(requestId, "REJECTED", message)
       setRequests(requests.map((r) => (r.id === requestId ? updated : r)))
       toast.success("Access request denied")
       setViewDialogOpen(false)
@@ -147,10 +147,10 @@ export function AdminAccessRequests() {
                         {request.user_email}
                       </p>
                       <p className="text-xs text-foreground line-clamp-2 mb-3">
-                        {request.reason}
+                        {request.message}
                       </p>
                       <p className="text-[10px] text-muted-foreground">
-                        {new Date(request.created_at).toLocaleString()}
+                        {new Date(request.requested_at).toLocaleString()}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -181,16 +181,16 @@ export function AdminAccessRequests() {
                               </div>
 
                               <div className="space-y-2">
-                                <p className="text-xs text-muted-foreground">Request Reason</p>
+                                <p className="text-xs text-muted-foreground">Request Message</p>
                                 <p className="text-sm text-foreground whitespace-pre-wrap">
-                                  {selectedRequest.reason}
+                                  {selectedRequest.message}
                                 </p>
                               </div>
 
                               <div className="space-y-2">
                                 <p className="text-xs text-muted-foreground">Submitted</p>
                                 <p className="text-sm text-foreground">
-                                  {new Date(selectedRequest.created_at).toLocaleString()}
+                                  {new Date(selectedRequest.requested_at).toLocaleString()}
                                 </p>
                               </div>
 
@@ -198,7 +198,7 @@ export function AdminAccessRequests() {
                                 <div className="flex gap-2 pt-2">
                                   <Button
                                     variant="outline"
-                                    onClick={() => handleDeny(selectedRequest.id)}
+                                    onClick={() => handleDeny(selectedRequest.id, selectedRequest.message)}
                                     disabled={actionLoading}
                                     className="flex-1"
                                   >
@@ -215,7 +215,7 @@ export function AdminAccessRequests() {
                                     )}
                                   </Button>
                                   <Button
-                                    onClick={() => handleApprove(selectedRequest.id)}
+                                    onClick={() => handleApprove(selectedRequest.id, selectedRequest.message)}
                                     disabled={actionLoading}
                                     className="flex-1"
                                   >
@@ -275,7 +275,7 @@ export function AdminAccessRequests() {
                         {request.user_email}
                       </p>
                       <p className="text-[10px] text-muted-foreground mt-2">
-                        Approved on {new Date(request.updated_at).toLocaleString()}
+                        Approved on {request.reviewed_at ? new Date(request.reviewed_at).toLocaleString() : "-"}
                       </p>
                     </div>
                     {getStatusBadge(request.status)}
@@ -316,7 +316,7 @@ export function AdminAccessRequests() {
                         {request.user_email}
                       </p>
                       <p className="text-[10px] text-muted-foreground mt-2">
-                        Denied on {new Date(request.updated_at).toLocaleString()}
+                        Denied on {request.reviewed_at ? new Date(request.reviewed_at).toLocaleString() : "-"}
                       </p>
                     </div>
                     {getStatusBadge(request.status)}
