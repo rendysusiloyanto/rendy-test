@@ -242,9 +242,8 @@ function TestContent() {
     }
 
     const wsBase = API_URL.replace(/^http/, "ws")
-    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-    const wsUrl = `${wsBase}/api/ukk/test/ws${token ? `?token=${token}` : ""}`
-    
+    const wsUrl = `${wsBase}/api/ukk/test/ws`
+
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
@@ -286,8 +285,9 @@ function TestContent() {
         },
       }
 
-      const payload = { data: configToSend }
-      console.log("[v0] Sending test config:", payload)
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+      const payload: Record<string, unknown> = { data: configToSend }
+      if (token) payload.token = token
       ws.send(JSON.stringify(payload))
     }
 
