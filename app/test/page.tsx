@@ -31,6 +31,8 @@ import {
   LayoutTemplate,
   ChevronDown,
   ChevronRight,
+  History,
+  Trash2,
 } from "lucide-react"
 import type { TestResult, TestStep } from "@/lib/types"
 
@@ -45,6 +47,8 @@ const CATEGORY_META: Record<string, { label: string; icon: React.ReactNode }> = 
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
+const HISTORY_KEY = "ukk_test_input_history"
+const MAX_HISTORY = 5
 
 type TestState = "idle" | "connecting" | "running" | "done" | "error"
 
@@ -139,6 +143,81 @@ interface TestConfig {
   }
 }
 
+type HistoryEntry = {
+  label: string
+  savedAt: number
+  config: TestConfig
+  phpModules: string[]
+}
+
+const DEFAULT_CONFIG: TestConfig = {
+  vm_proxmox: {
+    inputs: { name: "", host: "", user: "root", password: "" },
+    expected: {
+      resources: { cores: 6, memory: 8192, disk_size: "32G" },
+      vm_status: "running",
+      vm_access: true,
+    },
+  },
+  vm_ubuntu: {
+    inputs: { name: "", host: "", user: "", password: "" },
+    expected: {
+      resources: { cores: 6, memory: 6144, disk_size: "32G" },
+      vm_status: "running",
+      vm_access: true,
+    },
+  },
+  php: {
+    expected: {
+      binary: true,
+      modules: {
+        mysqli: true,
+        curl: true,
+        gd: true,
+        mbstring: true,
+        xml: true,
+        json: true,
+        zip: true,
+        openssl: true,
+      },
+    },
+  },
+  web_server: {
+    expected: {
+      nginx_binary: true,
+      nginx_service: true,
+      nginx_config_syntax: true,
+    },
+  },
+  mysql: {
+    inputs: { db_name: "wordpress", db_user: "", db_password: "" },
+    expected: {
+      binary: true,
+      service: true,
+      database_exists: true,
+      user_exists: true,
+      db_connection: true,
+    },
+  },
+  wordpress: {
+    inputs: { url: "", username: "admin", password: "" },
+    expected: { status_code: 200, login_success: true },
+  },
+  dns: {
+    inputs: { domain: "", ip: "" },
+    expected: { domain: "", ip: "" },
+  },
+}
+
+// Disk size validation: must be a number followed by exactly one G or M (case-insensitive), e.g. 32G, 512M
+function validateDiskSize(value: string): string | null {
+  if (!value) return null
+  if (!/^\d+[GM]$/i.test(value)) {
+    return "Must be a number followed by G or M (e.g. 32G, 512M)"
+  }
+  return null
+}
+
 function GradeBadge({ grade }: { grade: string }) {
   const colors: Record<string, string> = {
     A: "border-success/40 bg-success/10 text-success",
@@ -172,11 +251,13 @@ function StepStatusIcon({ status }: { status: string }) {
   }
 }
 
-function StepRow({ step }: { step: RichStep }) {
+function StepRow({ step, forceExpand }: { step: RichStep; forceExpand?: boolean }) {
   const [expanded, setExpanded] = useState(false)
   const isPass = step.status === "pass" || step.status === "success"
   const isFail = step.status === "fail" || step.status === "failed"
   const hasDetail = Boolean(step.detail)
+
+  const isExpanded = forceExpand || expanded
 
   return (
     <div className={`transition-colors ${
@@ -198,7 +279,7 @@ function StepRow({ step }: { step: RichStep }) {
               {step.score ?? 0}/{step.max_score}
             </span>
           )}
-          {hasDetail && (
+          {hasDetail && !forceExpand && (
             <button
               onClick={() => setExpanded((v) => !v)}
               className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
@@ -209,11 +290,75 @@ function StepRow({ step }: { step: RichStep }) {
           )}
         </div>
       </div>
-      {expanded && hasDetail && (
+      {isExpanded && hasDetail && (
         <div className="px-3 pb-2.5 -mt-1">
           <pre className="text-xs text-muted-foreground bg-muted/50 border border-border rounded px-3 py-2 font-mono whitespace-pre-wrap break-words">
             {step.detail}
           </pre>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CategoryGroup({
+  cat,
+  catSteps,
+  showScore = false,
+  autoExpand = false,
+}: {
+  cat: string
+  catSteps: RichStep[]
+  showScore?: boolean
+  autoExpand?: boolean
+}) {
+  const meta = CATEGORY_META[cat]
+  const catPass = catSteps.filter((s) => s.status === "pass" || s.status === "success").length
+  const catFail = catSteps.filter((s) => s.status === "fail" || s.status === "failed").length
+  const catScore = catSteps.reduce((sum, s) => sum + (s.score ?? 0), 0)
+  const catMax = catSteps.reduce((sum, s) => sum + (s.max_score ?? 0), 0)
+  const [isOpen, setIsOpen] = useState(autoExpand)
+
+  // If autoExpand changes to true (e.g. after validation), open
+  useEffect(() => {
+    if (autoExpand) setIsOpen(true)
+  }, [autoExpand])
+
+  return (
+    <div className="rounded-lg border border-border overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        className="w-full flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border hover:bg-muted/70 transition-colors text-left"
+      >
+        <span className="text-muted-foreground">{meta?.icon}</span>
+        <span className="text-xs font-semibold text-foreground">{meta?.label ?? cat}</span>
+        <div className="ml-auto flex items-center gap-3 text-[10px]">
+          {showScore ? (
+            <>
+              <span className="text-muted-foreground">{catPass}/{catSteps.length} passed</span>
+              {catMax > 0 && (
+                <span className="font-mono font-medium text-foreground">{catScore}/{catMax} pts</span>
+              )}
+            </>
+          ) : (
+            <>
+              <span className="text-success">{catPass} passed</span>
+              {catFail > 0 && <span className="text-destructive">{catFail} failed</span>}
+            </>
+          )}
+          {isOpen ? (
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
+        </div>
+      </button>
+      {isOpen && (
+        <div className="divide-y divide-border">
+          {catSteps.map((step) => (
+            <StepRow key={step.step} step={step} />
+          ))}
         </div>
       )}
     </div>
@@ -228,82 +373,134 @@ function TestContent() {
   const [finalResult, setFinalResult] = useState<TestResult | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [restrictedDialogOpen, setRestrictedDialogOpen] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [autoExpandCats, setAutoExpandCats] = useState<Set<string>>(new Set())
   const wsRef = useRef<WebSocket | null>(null)
   const stepsEndRef = useRef<HTMLDivElement>(null)
 
-  // Test configuration
-  const [config, setConfig] = useState<TestConfig>({
-    vm_proxmox: {
-      inputs: { name: "", host: "", user: "root", password: "" },
-      expected: {
-        resources: { cores: 6, memory: 8192, disk_size: "32G" },
-        vm_status: "running",
-        vm_access: true,
-      },
-    },
-    vm_ubuntu: {
-      inputs: { name: "", host: "", user: "", password: "" },
-      expected: {
-        resources: { cores: 6, memory: 6144, disk_size: "32G" },
-        vm_status: "running",
-        vm_access: true,
-      },
-    },
-    php: {
-      expected: {
-        binary: true,
-        modules: {
-          mysqli: true,
-          curl: true,
-          gd: true,
-          mbstring: true,
-          xml: true,
-          json: true,
-          zip: true,
-          openssl: true,
-        },
-      },
-    },
-    web_server: {
-      expected: {
-        nginx_binary: true,
-        nginx_service: true,
-        nginx_config_syntax: true,
-      },
-    },
-    mysql: {
-      inputs: { db_name: "wordpress", db_user: "", db_password: "" },
-      expected: {
-        binary: true,
-        service: true,
-        database_exists: true,
-        user_exists: true,
-        db_connection: true,
-      },
-    },
-    wordpress: {
-      inputs: { url: "", username: "admin", password: "" },
-      expected: { status_code: 200, login_success: true },
-    },
-    dns: {
-      inputs: { domain: "", ip: "" },
-      expected: { domain: "", ip: "" },
-    },
-  })
+  // History state
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [showHistory, setShowHistory] = useState(false)
 
-  const [phpModules, setPhpModules] = useState<string[]>(Object.keys(config.php.expected.modules))
+  const [config, setConfig] = useState<TestConfig>(DEFAULT_CONFIG)
+  const [phpModules, setPhpModules] = useState<string[]>(Object.keys(DEFAULT_CONFIG.php.expected.modules))
   const [newModule, setNewModule] = useState("")
+
+  // Load history from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY)
+      if (raw) {
+        const parsed: HistoryEntry[] = JSON.parse(raw)
+        setHistory(parsed)
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  const saveHistory = useCallback((cfg: TestConfig, mods: string[]) => {
+    const label = [
+      cfg.vm_proxmox.inputs.name,
+      cfg.vm_proxmox.inputs.host,
+    ]
+      .filter(Boolean)
+      .join(" / ") || "Unnamed config"
+
+    const entry: HistoryEntry = {
+      label,
+      savedAt: Date.now(),
+      config: cfg,
+      phpModules: mods,
+    }
+
+    setHistory((prev) => {
+      const next = [entry, ...prev.filter((h) => h.label !== entry.label)].slice(0, MAX_HISTORY)
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(next))
+      } catch {
+        // ignore
+      }
+      return next
+    })
+  }, [])
+
+  const loadHistory = useCallback((entry: HistoryEntry) => {
+    setConfig(entry.config)
+    setPhpModules(entry.phpModules)
+    setShowHistory(false)
+    setValidationErrors({})
+  }, [])
+
+  const clearHistory = useCallback(() => {
+    setHistory([])
+    try {
+      localStorage.removeItem(HISTORY_KEY)
+    } catch {
+      // ignore
+    }
+    setShowHistory(false)
+  }, [])
+
+  const clearAllFields = useCallback(() => {
+    setConfig(DEFAULT_CONFIG)
+    setPhpModules(Object.keys(DEFAULT_CONFIG.php.expected.modules))
+    setNewModule("")
+    setValidationErrors({})
+  }, [])
 
   // Auto-scroll to bottom when new steps arrive
   useEffect(() => {
     stepsEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [steps])
 
+  // When a new step comes in for a category containing "PVE-RES-CORES", auto-expand it
+  useEffect(() => {
+    const proxmoxSteps = steps.filter((s) => s.category === "proxmox" || (s.step && s.step.includes("PVE-RES")))
+    if (proxmoxSteps.length > 0) {
+      setAutoExpandCats((prev) => new Set([...prev, "proxmox"]))
+    }
+  }, [steps])
+
+  const validateForm = useCallback((): boolean => {
+    const errors: Record<string, string> = {}
+
+    // Proxmox VM — required fields
+    if (!config.vm_proxmox.inputs.name.trim()) {
+      errors["prox-name"] = "VM Name is required"
+    }
+    if (!config.vm_proxmox.inputs.host.trim()) {
+      errors["prox-host"] = "Host IP is required"
+    }
+    if (!config.vm_proxmox.inputs.user.trim()) {
+      errors["prox-user"] = "User is required"
+    }
+    if (!config.vm_proxmox.inputs.password.trim()) {
+      errors["prox-password"] = "Password is required"
+    }
+
+    // disk_size validation for both VMs
+    const proxDiskErr = validateDiskSize(config.vm_proxmox.expected.resources.disk_size)
+    if (proxDiskErr) errors["prox-disk"] = proxDiskErr
+
+    const ubuntuDiskErr = validateDiskSize(config.vm_ubuntu.expected.resources.disk_size)
+    if (ubuntuDiskErr) errors["ubuntu-disk"] = ubuntuDiskErr
+
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }, [config])
+
   const startTest = useCallback(() => {
+    if (!validateForm()) return
+
+    // Save current config to history before running
+    saveHistory(config, phpModules)
+
     setState("connecting")
     setSteps([])
     setFinalResult(null)
     setErrorMsg(null)
+    setAutoExpandCats(new Set())
 
     if (wsRef.current) {
       wsRef.current.close()
@@ -348,13 +545,11 @@ function TestContent() {
       try {
         const data = JSON.parse(event.data)
 
-        // Server signals test has started
         if (data.event === "start") {
           setState("running")
           return
         }
 
-        // Server signals test is finished with summary
         if (data.event === "finished" && data.summary) {
           const s = data.summary
           setFinalResult({
@@ -368,14 +563,12 @@ function TestContent() {
           return
         }
 
-        // Server error event
         if (data.event === "error") {
           setErrorMsg(data.message || "An unknown error occurred")
           setState("error")
           return
         }
 
-        // Step result — has step_code + step_name + status
         if (data.step_code && data.step_name) {
           const normalized: TestStep["status"] =
             data.status === "success" ? "pass" : data.status === "failed" ? "fail" : data.status
@@ -388,6 +581,14 @@ function TestContent() {
             category: data.category ?? undefined,
             score: data.score ?? undefined,
             max_score: data.max_score ?? undefined,
+          }
+
+          // Auto-expand proxmox category when PVE-RES-CORES step arrives
+          if (
+            data.step_code === "PVE-RES-CORES" ||
+            (data.category === "proxmox" && data.step_code?.startsWith("PVE-RES"))
+          ) {
+            setAutoExpandCats((prev) => new Set([...prev, "proxmox"]))
           }
 
           setState((prev) => (prev === "connecting" ? "running" : prev))
@@ -403,7 +604,6 @@ function TestContent() {
           return
         }
 
-        // Final result message
         if (data.type === "result") {
           setFinalResult(data)
           setState("done")
@@ -411,7 +611,6 @@ function TestContent() {
           return
         }
 
-        // Legacy progress format
         if (data.type === "progress" && data.step && data.label) {
           const step: RichStep = {
             step: data.step,
@@ -431,7 +630,6 @@ function TestContent() {
           return
         }
 
-        // Legacy error format
         if (data.type === "error") {
           setErrorMsg(data.message || "An unknown error occurred")
           setState("error")
@@ -459,7 +657,7 @@ function TestContent() {
       setErrorMsg("Failed to connect to the test server - check your network connection")
       ws.close()
     }
-  }, [config, phpModules])
+  }, [config, phpModules, validateForm, saveHistory])
 
   const handleReset = useCallback(() => {
     if (wsRef.current) {
@@ -470,9 +668,9 @@ function TestContent() {
     setSteps([])
     setFinalResult(null)
     setErrorMsg(null)
+    setAutoExpandCats(new Set())
   }, [])
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (wsRef.current) {
@@ -487,13 +685,17 @@ function TestContent() {
   const totalScore = steps.reduce((sum, s) => sum + (s.score ?? 0), 0)
   const maxScore = steps.reduce((sum, s) => sum + (s.max_score ?? 0), 0)
 
-  // Group steps by category
   const groupedSteps = steps.reduce<Record<string, RichStep[]>>((acc, step) => {
     const cat = step.category ?? "other"
     if (!acc[cat]) acc[cat] = []
     acc[cat].push(step)
     return acc
   }, {})
+
+  const hasValidationErrors = Object.keys(validationErrors).length > 0
+
+  const fieldClass = (id: string) =>
+    `h-9 text-sm ${validationErrors[id] ? "border-destructive focus-visible:ring-destructive" : ""}`
 
   if (isBlacklisted) {
     return (
@@ -510,9 +712,7 @@ function TestContent() {
             <CardContent className="flex flex-col items-center gap-4 py-12">
               <AlertCircle className="h-12 w-12 text-destructive" />
               <div className="text-center space-y-2">
-                <p className="text-lg font-semibold text-foreground">
-                  Access Restricted
-                </p>
+                <p className="text-lg font-semibold text-foreground">Access Restricted</p>
                 <p className="text-sm text-muted-foreground">
                   Your account is currently restricted from accessing test service
                 </p>
@@ -553,9 +753,7 @@ function TestContent() {
                 <AlertTriangle className="h-6 w-6 text-muted-foreground" />
               </div>
               <div className="text-center space-y-2">
-                <p className="text-lg font-semibold text-foreground">
-                  Access Not Available
-                </p>
+                <p className="text-lg font-semibold text-foreground">Access Not Available</p>
                 <p className="text-sm text-muted-foreground max-w-sm">
                   Guest accounts cannot run the test service. Please contact your admin to upgrade your account.
                 </p>
@@ -571,30 +769,126 @@ function TestContent() {
     <AppShell>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            UKK Test Service
-          </h1>
+          <h1 className="text-2xl font-bold text-foreground">UKK Test Service</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Test your Proxmox, Ubuntu, WordPress, and DNS configuration
           </p>
         </div>
 
-        {/* Start / Status card */}
         <Card className="border-border bg-card">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base text-foreground">
-              <FlaskConical className="h-4 w-4 text-primary" />
-              Competency Test
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base text-foreground">
+                <FlaskConical className="h-4 w-4 text-primary" />
+                Competency Test
+              </CardTitle>
+
+              {state === "idle" && (
+                <div className="flex items-center gap-2">
+                  {/* History button */}
+                  <div className="relative">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5 text-xs"
+                      onClick={() => setShowHistory((v) => !v)}
+                    >
+                      <History className="h-3.5 w-3.5" />
+                      History
+                      {history.length > 0 && (
+                        <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[10px] font-mono">
+                          {history.length}
+                        </Badge>
+                      )}
+                    </Button>
+
+                    {showHistory && (
+                      <div className="absolute right-0 top-9 z-50 w-72 rounded-lg border border-border bg-card shadow-lg">
+                        <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                          <span className="text-xs font-semibold text-foreground">Previous Inputs</span>
+                          {history.length > 0 && (
+                            <button
+                              onClick={clearHistory}
+                              className="flex items-center gap-1 text-[10px] text-destructive hover:text-destructive/80 transition-colors"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              Clear all
+                            </button>
+                          )}
+                        </div>
+                        {history.length === 0 ? (
+                          <div className="px-3 py-4 text-center text-xs text-muted-foreground">
+                            No saved history yet
+                          </div>
+                        ) : (
+                          <div className="max-h-64 overflow-y-auto">
+                            {history.map((entry, i) => (
+                              <button
+                                key={i}
+                                onClick={() => loadHistory(entry)}
+                                className="w-full flex flex-col gap-0.5 px-3 py-2.5 text-left hover:bg-accent transition-colors border-b border-border last:border-0"
+                              >
+                                <span className="text-xs font-medium text-foreground truncate">
+                                  {entry.label}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  {new Date(entry.savedAt).toLocaleString()}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Clear all fields */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs"
+                    onClick={clearAllFields}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Clear fields
+                  </Button>
+                </div>
+              )}
+            </div>
           </CardHeader>
+
           <CardContent>
+            {/* Click outside to close history dropdown */}
+            {showHistory && (
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowHistory(false)}
+              />
+            )}
+
             {state === "idle" && (
               <div className="space-y-6">
+
+                {/* Global validation error banner */}
+                {hasValidationErrors && (
+                  <div className="flex items-start gap-3 rounded-lg bg-destructive/5 border border-destructive/20 px-3 py-2.5">
+                    <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                    <p className="text-xs text-destructive">
+                      Please fix the errors below before starting the test.
+                    </p>
+                  </div>
+                )}
+
                 {/* Proxmox VM */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Proxmox VM Configuration
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Proxmox VM Configuration
+                    </h3>
+                    <Badge variant="outline" className="text-[10px] border-destructive/40 text-destructive px-1.5 py-0">
+                      Required
+                    </Badge>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label htmlFor="prox-name" className="text-xs">
@@ -603,21 +897,16 @@ function TestContent() {
                       <Input
                         id="prox-name"
                         value={config.vm_proxmox.inputs.name}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            vm_proxmox: {
-                              ...config.vm_proxmox,
-                              inputs: {
-                                ...config.vm_proxmox.inputs,
-                                name: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => {
+                          setConfig({ ...config, vm_proxmox: { ...config.vm_proxmox, inputs: { ...config.vm_proxmox.inputs, name: e.target.value } } })
+                          if (validationErrors["prox-name"]) setValidationErrors((prev) => { const n = { ...prev }; delete n["prox-name"]; return n })
+                        }}
                         placeholder="test-proxmox"
-                        className="h-9 text-sm"
+                        className={fieldClass("prox-name")}
                       />
+                      {validationErrors["prox-name"] && (
+                        <p className="text-[10px] text-destructive">{validationErrors["prox-name"]}</p>
+                      )}
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="prox-host" className="text-xs">
@@ -626,21 +915,16 @@ function TestContent() {
                       <Input
                         id="prox-host"
                         value={config.vm_proxmox.inputs.host}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            vm_proxmox: {
-                              ...config.vm_proxmox,
-                              inputs: {
-                                ...config.vm_proxmox.inputs,
-                                host: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => {
+                          setConfig({ ...config, vm_proxmox: { ...config.vm_proxmox, inputs: { ...config.vm_proxmox.inputs, host: e.target.value } } })
+                          if (validationErrors["prox-host"]) setValidationErrors((prev) => { const n = { ...prev }; delete n["prox-host"]; return n })
+                        }}
                         placeholder="10.10.10.65"
-                        className="h-9 text-sm"
+                        className={fieldClass("prox-host")}
                       />
+                      {validationErrors["prox-host"] && (
+                        <p className="text-[10px] text-destructive">{validationErrors["prox-host"]}</p>
+                      )}
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="prox-user" className="text-xs">
@@ -649,21 +933,16 @@ function TestContent() {
                       <Input
                         id="prox-user"
                         value={config.vm_proxmox.inputs.user}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            vm_proxmox: {
-                              ...config.vm_proxmox,
-                              inputs: {
-                                ...config.vm_proxmox.inputs,
-                                user: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => {
+                          setConfig({ ...config, vm_proxmox: { ...config.vm_proxmox, inputs: { ...config.vm_proxmox.inputs, user: e.target.value } } })
+                          if (validationErrors["prox-user"]) setValidationErrors((prev) => { const n = { ...prev }; delete n["prox-user"]; return n })
+                        }}
                         placeholder="root"
-                        className="h-9 text-sm"
+                        className={fieldClass("prox-user")}
                       />
+                      {validationErrors["prox-user"] && (
+                        <p className="text-[10px] text-destructive">{validationErrors["prox-user"]}</p>
+                      )}
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="prox-password" className="text-xs">
@@ -673,21 +952,16 @@ function TestContent() {
                         id="prox-password"
                         type="text"
                         value={config.vm_proxmox.inputs.password}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            vm_proxmox: {
-                              ...config.vm_proxmox,
-                              inputs: {
-                                ...config.vm_proxmox.inputs,
-                                password: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => {
+                          setConfig({ ...config, vm_proxmox: { ...config.vm_proxmox, inputs: { ...config.vm_proxmox.inputs, password: e.target.value } } })
+                          if (validationErrors["prox-password"]) setValidationErrors((prev) => { const n = { ...prev }; delete n["prox-password"]; return n })
+                        }}
                         placeholder="password"
-                        className="h-9 text-sm"
+                        className={fieldClass("prox-password")}
                       />
+                      {validationErrors["prox-password"] && (
+                        <p className="text-[10px] text-destructive">{validationErrors["prox-password"]}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -701,16 +975,7 @@ function TestContent() {
                       type="number"
                       value={config.vm_proxmox.expected.resources.cores}
                       onChange={(e) =>
-                        setConfig({
-                          ...config,
-                          vm_proxmox: {
-                            ...config.vm_proxmox,
-                            expected: {
-                              ...config.vm_proxmox.expected,
-                              resources: { ...config.vm_proxmox.expected.resources, cores: Number(e.target.value) },
-                            },
-                          },
-                        })
+                        setConfig({ ...config, vm_proxmox: { ...config.vm_proxmox, expected: { ...config.vm_proxmox.expected, resources: { ...config.vm_proxmox.expected.resources, cores: Number(e.target.value) } } } })
                       }
                       placeholder="6"
                       className="h-9 text-sm"
@@ -723,16 +988,7 @@ function TestContent() {
                       type="number"
                       value={config.vm_proxmox.expected.resources.memory}
                       onChange={(e) =>
-                        setConfig({
-                          ...config,
-                          vm_proxmox: {
-                            ...config.vm_proxmox,
-                            expected: {
-                              ...config.vm_proxmox.expected,
-                              resources: { ...config.vm_proxmox.expected.resources, memory: Number(e.target.value) },
-                            },
-                          },
-                        })
+                        setConfig({ ...config, vm_proxmox: { ...config.vm_proxmox, expected: { ...config.vm_proxmox.expected, resources: { ...config.vm_proxmox.expected.resources, memory: Number(e.target.value) } } } })
                       }
                       placeholder="8192"
                       className="h-9 text-sm"
@@ -743,21 +999,24 @@ function TestContent() {
                     <Input
                       id="prox-disk"
                       value={config.vm_proxmox.expected.resources.disk_size}
-                      onChange={(e) =>
-                        setConfig({
-                          ...config,
-                          vm_proxmox: {
-                            ...config.vm_proxmox,
-                            expected: {
-                              ...config.vm_proxmox.expected,
-                              resources: { ...config.vm_proxmox.expected.resources, disk_size: e.target.value },
-                            },
-                          },
+                      onChange={(e) => {
+                        setConfig({ ...config, vm_proxmox: { ...config.vm_proxmox, expected: { ...config.vm_proxmox.expected, resources: { ...config.vm_proxmox.expected.resources, disk_size: e.target.value } } } })
+                        const err = validateDiskSize(e.target.value)
+                        setValidationErrors((prev) => {
+                          const n = { ...prev }
+                          if (err) n["prox-disk"] = err
+                          else delete n["prox-disk"]
+                          return n
                         })
-                      }
+                      }}
                       placeholder="32G"
-                      className="h-9 text-sm"
+                      className={fieldClass("prox-disk")}
                     />
+                    {validationErrors["prox-disk"] ? (
+                      <p className="text-[10px] text-destructive">{validationErrors["prox-disk"]}</p>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground">Format: 32G or 512M</p>
+                    )}
                   </div>
                 </div>
 
@@ -768,94 +1027,42 @@ function TestContent() {
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label htmlFor="ubuntu-name" className="text-xs">
-                        VM Name
-                      </Label>
+                      <Label htmlFor="ubuntu-name" className="text-xs">VM Name</Label>
                       <Input
                         id="ubuntu-name"
                         value={config.vm_ubuntu.inputs.name}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            vm_ubuntu: {
-                              ...config.vm_ubuntu,
-                              inputs: {
-                                ...config.vm_ubuntu.inputs,
-                                name: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => setConfig({ ...config, vm_ubuntu: { ...config.vm_ubuntu, inputs: { ...config.vm_ubuntu.inputs, name: e.target.value } } })}
                         placeholder="jns23-ubuntu"
                         className="h-9 text-sm"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="ubuntu-host" className="text-xs">
-                        Host IP
-                      </Label>
+                      <Label htmlFor="ubuntu-host" className="text-xs">Host IP</Label>
                       <Input
                         id="ubuntu-host"
                         value={config.vm_ubuntu.inputs.host}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            vm_ubuntu: {
-                              ...config.vm_ubuntu,
-                              inputs: {
-                                ...config.vm_ubuntu.inputs,
-                                host: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => setConfig({ ...config, vm_ubuntu: { ...config.vm_ubuntu, inputs: { ...config.vm_ubuntu.inputs, host: e.target.value } } })}
                         placeholder="10.10.10.20"
                         className="h-9 text-sm"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="ubuntu-user" className="text-xs">
-                        User
-                      </Label>
+                      <Label htmlFor="ubuntu-user" className="text-xs">User</Label>
                       <Input
                         id="ubuntu-user"
                         value={config.vm_ubuntu.inputs.user}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            vm_ubuntu: {
-                              ...config.vm_ubuntu,
-                              inputs: {
-                                ...config.vm_ubuntu.inputs,
-                                user: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => setConfig({ ...config, vm_ubuntu: { ...config.vm_ubuntu, inputs: { ...config.vm_ubuntu.inputs, user: e.target.value } } })}
                         placeholder="jns23"
                         className="h-9 text-sm"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="ubuntu-password" className="text-xs">
-                        Password
-                      </Label>
+                      <Label htmlFor="ubuntu-password" className="text-xs">Password</Label>
                       <Input
                         id="ubuntu-password"
                         type="text"
                         value={config.vm_ubuntu.inputs.password}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            vm_ubuntu: {
-                              ...config.vm_ubuntu,
-                              inputs: {
-                                ...config.vm_ubuntu.inputs,
-                                password: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => setConfig({ ...config, vm_ubuntu: { ...config.vm_ubuntu, inputs: { ...config.vm_ubuntu.inputs, password: e.target.value } } })}
                         placeholder="password"
                         className="h-9 text-sm"
                       />
@@ -870,18 +1077,7 @@ function TestContent() {
                         id="ubuntu-cores"
                         type="number"
                         value={config.vm_ubuntu.expected.resources.cores}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            vm_ubuntu: {
-                              ...config.vm_ubuntu,
-                              expected: {
-                                ...config.vm_ubuntu.expected,
-                                resources: { ...config.vm_ubuntu.expected.resources, cores: Number(e.target.value) },
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => setConfig({ ...config, vm_ubuntu: { ...config.vm_ubuntu, expected: { ...config.vm_ubuntu.expected, resources: { ...config.vm_ubuntu.expected.resources, cores: Number(e.target.value) } } } })}
                         placeholder="6"
                         className="h-9 text-sm"
                       />
@@ -892,18 +1088,7 @@ function TestContent() {
                         id="ubuntu-memory"
                         type="number"
                         value={config.vm_ubuntu.expected.resources.memory}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            vm_ubuntu: {
-                              ...config.vm_ubuntu,
-                              expected: {
-                                ...config.vm_ubuntu.expected,
-                                resources: { ...config.vm_ubuntu.expected.resources, memory: Number(e.target.value) },
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => setConfig({ ...config, vm_ubuntu: { ...config.vm_ubuntu, expected: { ...config.vm_ubuntu.expected, resources: { ...config.vm_ubuntu.expected.resources, memory: Number(e.target.value) } } } })}
                         placeholder="6144"
                         className="h-9 text-sm"
                       />
@@ -913,30 +1098,31 @@ function TestContent() {
                       <Input
                         id="ubuntu-disk"
                         value={config.vm_ubuntu.expected.resources.disk_size}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            vm_ubuntu: {
-                              ...config.vm_ubuntu,
-                              expected: {
-                                ...config.vm_ubuntu.expected,
-                                resources: { ...config.vm_ubuntu.expected.resources, disk_size: e.target.value },
-                              },
-                            },
+                        onChange={(e) => {
+                          setConfig({ ...config, vm_ubuntu: { ...config.vm_ubuntu, expected: { ...config.vm_ubuntu.expected, resources: { ...config.vm_ubuntu.expected.resources, disk_size: e.target.value } } } })
+                          const err = validateDiskSize(e.target.value)
+                          setValidationErrors((prev) => {
+                            const n = { ...prev }
+                            if (err) n["ubuntu-disk"] = err
+                            else delete n["ubuntu-disk"]
+                            return n
                           })
-                        }
+                        }}
                         placeholder="32G"
-                        className="h-9 text-sm"
+                        className={fieldClass("ubuntu-disk")}
                       />
+                      {validationErrors["ubuntu-disk"] ? (
+                        <p className="text-[10px] text-destructive">{validationErrors["ubuntu-disk"]}</p>
+                      ) : (
+                        <p className="text-[10px] text-muted-foreground">Format: 32G or 512M</p>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* PHP Modules */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    PHP Modules
-                  </h3>
+                  <h3 className="text-sm font-semibold text-foreground">PHP Modules</h3>
                   <div className="flex flex-wrap gap-2">
                     {phpModules.map((mod) => (
                       <Badge
@@ -946,9 +1132,7 @@ function TestContent() {
                       >
                         {mod}
                         <button
-                          onClick={() =>
-                            setPhpModules(phpModules.filter((m) => m !== mod))
-                          }
+                          onClick={() => setPhpModules(phpModules.filter((m) => m !== mod))}
                           className="hover:text-destructive transition-colors"
                         >
                           <X className="h-3 w-3" />
@@ -973,10 +1157,7 @@ function TestContent() {
                     />
                     <Button
                       onClick={() => {
-                        if (
-                          newModule.trim() &&
-                          !phpModules.includes(newModule.trim())
-                        ) {
+                        if (newModule.trim() && !phpModules.includes(newModule.trim())) {
                           setPhpModules([...phpModules, newModule.trim()])
                           setNewModule("")
                         }
@@ -992,76 +1173,35 @@ function TestContent() {
 
                 {/* MySQL */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    MySQL Configuration
-                  </h3>
+                  <h3 className="text-sm font-semibold text-foreground">MySQL Configuration</h3>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1.5">
-                      <Label htmlFor="mysql-db" className="text-xs">
-                        Database Name
-                      </Label>
+                      <Label htmlFor="mysql-db" className="text-xs">Database Name</Label>
                       <Input
                         id="mysql-db"
                         value={config.mysql.inputs.db_name}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            mysql: {
-                              ...config.mysql,
-                              inputs: {
-                                ...config.mysql.inputs,
-                                db_name: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => setConfig({ ...config, mysql: { ...config.mysql, inputs: { ...config.mysql.inputs, db_name: e.target.value } } })}
                         placeholder="wordpress"
                         className="h-9 text-sm"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="mysql-user" className="text-xs">
-                        Database User
-                      </Label>
+                      <Label htmlFor="mysql-user" className="text-xs">Database User</Label>
                       <Input
                         id="mysql-user"
                         value={config.mysql.inputs.db_user}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            mysql: {
-                              ...config.mysql,
-                              inputs: {
-                                ...config.mysql.inputs,
-                                db_user: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => setConfig({ ...config, mysql: { ...config.mysql, inputs: { ...config.mysql.inputs, db_user: e.target.value } } })}
                         placeholder="jns23"
                         className="h-9 text-sm"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="mysql-password" className="text-xs">
-                        Password
-                      </Label>
+                      <Label htmlFor="mysql-password" className="text-xs">Password</Label>
                       <Input
                         id="mysql-password"
                         type="text"
                         value={config.mysql.inputs.db_password}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            mysql: {
-                              ...config.mysql,
-                              inputs: {
-                                ...config.mysql.inputs,
-                                db_password: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => setConfig({ ...config, mysql: { ...config.mysql, inputs: { ...config.mysql.inputs, db_password: e.target.value } } })}
                         placeholder="password"
                         className="h-9 text-sm"
                       />
@@ -1071,76 +1211,35 @@ function TestContent() {
 
                 {/* WordPress */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    WordPress Configuration
-                  </h3>
+                  <h3 className="text-sm font-semibold text-foreground">WordPress Configuration</h3>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1.5">
-                      <Label htmlFor="wp-url" className="text-xs">
-                        URL
-                      </Label>
+                      <Label htmlFor="wp-url" className="text-xs">URL</Label>
                       <Input
                         id="wp-url"
                         value={config.wordpress.inputs.url}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            wordpress: {
-                              ...config.wordpress,
-                              inputs: {
-                                ...config.wordpress.inputs,
-                                url: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => setConfig({ ...config, wordpress: { ...config.wordpress, inputs: { ...config.wordpress.inputs, url: e.target.value } } })}
                         placeholder="http://10.10.10.20"
                         className="h-9 text-sm"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="wp-username" className="text-xs">
-                        Username
-                      </Label>
+                      <Label htmlFor="wp-username" className="text-xs">Username</Label>
                       <Input
                         id="wp-username"
                         value={config.wordpress.inputs.username}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            wordpress: {
-                              ...config.wordpress,
-                              inputs: {
-                                ...config.wordpress.inputs,
-                                username: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => setConfig({ ...config, wordpress: { ...config.wordpress, inputs: { ...config.wordpress.inputs, username: e.target.value } } })}
                         placeholder="admin"
                         className="h-9 text-sm"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="wp-password" className="text-xs">
-                        Password
-                      </Label>
+                      <Label htmlFor="wp-password" className="text-xs">Password</Label>
                       <Input
                         id="wp-password"
                         type="text"
                         value={config.wordpress.inputs.password}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            wordpress: {
-                              ...config.wordpress,
-                              inputs: {
-                                ...config.wordpress.inputs,
-                                password: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => setConfig({ ...config, wordpress: { ...config.wordpress, inputs: { ...config.wordpress.inputs, password: e.target.value } } })}
                         placeholder="password"
                         className="h-9 text-sm"
                       />
@@ -1150,52 +1249,24 @@ function TestContent() {
 
                 {/* DNS */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    DNS Configuration
-                  </h3>
+                  <h3 className="text-sm font-semibold text-foreground">DNS Configuration</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label htmlFor="dns-domain" className="text-xs">
-                        Domain
-                      </Label>
+                      <Label htmlFor="dns-domain" className="text-xs">Domain</Label>
                       <Input
                         id="dns-domain"
                         value={config.dns.inputs.domain}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            dns: {
-                              ...config.dns,
-                              inputs: {
-                                ...config.dns.inputs,
-                                domain: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => setConfig({ ...config, dns: { ...config.dns, inputs: { ...config.dns.inputs, domain: e.target.value } } })}
                         placeholder="ukk-jhuan.net"
                         className="h-9 text-sm"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="dns-ip" className="text-xs">
-                        IP Address
-                      </Label>
+                      <Label htmlFor="dns-ip" className="text-xs">IP Address</Label>
                       <Input
                         id="dns-ip"
                         value={config.dns.inputs.ip}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            dns: {
-                              ...config.dns,
-                              inputs: {
-                                ...config.dns.inputs,
-                                ip: e.target.value,
-                              },
-                            },
-                          })
-                        }
+                        onChange={(e) => setConfig({ ...config, dns: { ...config.dns, inputs: { ...config.dns.inputs, ip: e.target.value } } })}
                         placeholder="10.10.10.20"
                         className="h-9 text-sm"
                       />
@@ -1214,7 +1285,7 @@ function TestContent() {
               </div>
             )}
 
-            {(state === "connecting") && (
+            {state === "connecting" && (
               <div className="flex items-center gap-3 rounded-lg bg-muted border border-border p-4">
                 <Loader2 className="h-5 w-5 text-primary animate-spin shrink-0" />
                 <div>
@@ -1226,7 +1297,6 @@ function TestContent() {
 
             {state === "running" && (
               <div className="space-y-4">
-                {/* Status banner */}
                 <div className="flex items-center gap-3 rounded-lg bg-primary/5 border border-primary/20 p-3">
                   <Loader2 className="h-5 w-5 text-primary animate-spin shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -1251,31 +1321,16 @@ function TestContent() {
                   )}
                 </div>
 
-                {/* Grouped steps */}
                 {Object.keys(groupedSteps).length > 0 && (
                   <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
-                    {Object.entries(groupedSteps).map(([cat, catSteps]) => {
-                      const meta = CATEGORY_META[cat]
-                      const catPass = catSteps.filter((s) => s.status === "pass" || s.status === "success").length
-                      const catFail = catSteps.filter((s) => s.status === "fail" || s.status === "failed").length
-                      return (
-                        <div key={cat} className="rounded-lg border border-border overflow-hidden">
-                          <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border">
-                            <span className="text-muted-foreground">{meta?.icon}</span>
-                            <span className="text-xs font-semibold text-foreground">{meta?.label ?? cat}</span>
-                            <div className="ml-auto flex items-center gap-2 text-[10px]">
-                              <span className="text-success">{catPass} passed</span>
-                              {catFail > 0 && <span className="text-destructive">{catFail} failed</span>}
-                            </div>
-                          </div>
-                          <div className="divide-y divide-border">
-                            {catSteps.map((step) => (
-                              <StepRow key={step.step} step={step} />
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    })}
+                    {Object.entries(groupedSteps).map(([cat, catSteps]) => (
+                      <CategoryGroup
+                        key={cat}
+                        cat={cat}
+                        catSteps={catSteps}
+                        autoExpand={autoExpandCats.has(cat)}
+                      />
+                    ))}
                     <div ref={stepsEndRef} />
                   </div>
                 )}
@@ -1284,7 +1339,6 @@ function TestContent() {
 
             {state === "done" && (
               <div className="space-y-5">
-                {/* Score summary */}
                 <div className="rounded-lg bg-muted/40 border border-border p-4">
                   <div className="flex items-center gap-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10 shrink-0">
@@ -1317,33 +1371,16 @@ function TestContent() {
                   </div>
                 </div>
 
-                {/* Grouped results */}
                 <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
-                  {Object.entries(groupedSteps).map(([cat, catSteps]) => {
-                    const meta = CATEGORY_META[cat]
-                    const catPass = catSteps.filter((s) => s.status === "pass" || s.status === "success").length
-                    const catScore = catSteps.reduce((sum, s) => sum + (s.score ?? 0), 0)
-                    const catMax = catSteps.reduce((sum, s) => sum + (s.max_score ?? 0), 0)
-                    return (
-                      <div key={cat} className="rounded-lg border border-border overflow-hidden">
-                        <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border">
-                          <span className="text-muted-foreground">{meta?.icon}</span>
-                          <span className="text-xs font-semibold text-foreground">{meta?.label ?? cat}</span>
-                          <div className="ml-auto flex items-center gap-3 text-[10px] text-muted-foreground">
-                            <span>{catPass}/{catSteps.length} passed</span>
-                            {catMax > 0 && (
-                              <span className="font-mono font-medium text-foreground">{catScore}/{catMax} pts</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="divide-y divide-border">
-                          {catSteps.map((step) => (
-                            <StepRow key={step.step} step={step} />
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
+                  {Object.entries(groupedSteps).map(([cat, catSteps]) => (
+                    <CategoryGroup
+                      key={cat}
+                      cat={cat}
+                      catSteps={catSteps}
+                      showScore
+                      autoExpand={autoExpandCats.has(cat)}
+                    />
+                  ))}
                 </div>
 
                 <Button
@@ -1371,25 +1408,16 @@ function TestContent() {
                   </div>
                 </div>
 
-                {/* Show steps collected so far */}
                 {steps.length > 0 && (
                   <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
-                    {Object.entries(groupedSteps).map(([cat, catSteps]) => {
-                      const meta = CATEGORY_META[cat]
-                      return (
-                        <div key={cat} className="rounded-lg border border-border overflow-hidden">
-                          <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border">
-                            <span className="text-muted-foreground">{meta?.icon}</span>
-                            <span className="text-xs font-semibold text-foreground">{meta?.label ?? cat}</span>
-                          </div>
-                          <div className="divide-y divide-border">
-                            {catSteps.map((step) => (
-                              <StepRow key={step.step} step={step} />
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    })}
+                    {Object.entries(groupedSteps).map(([cat, catSteps]) => (
+                      <CategoryGroup
+                        key={cat}
+                        cat={cat}
+                        catSteps={catSteps}
+                        autoExpand={autoExpandCats.has(cat)}
+                      />
+                    ))}
                   </div>
                 )}
 
