@@ -1309,7 +1309,7 @@ function TestContent() {
                         key={cat}
                         cat={cat}
                         catSteps={catSteps}
-                        autoExpand={autoExpandCats.has(cat)}
+                        autoExpand={true}
                       />
                     ))}
                     <div ref={stepsEndRef} />
@@ -1359,7 +1359,7 @@ function TestContent() {
                       cat={cat}
                       catSteps={catSteps}
                       showScore
-                      autoExpand={autoExpandCats.has(cat)}
+                      autoExpand={true}
                     />
                   ))}
                 </div>
@@ -1396,7 +1396,7 @@ function TestContent() {
                         key={cat}
                         cat={cat}
                         catSteps={catSteps}
-                        autoExpand={autoExpandCats.has(cat)}
+                        autoExpand={true}
                       />
                     ))}
                   </div>
