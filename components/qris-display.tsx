@@ -9,10 +9,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { QrCode, X } from "lucide-react"
 
 export function QrisDisplay() {
   const [support, setSupport] = useState<SupportResponse | null>(null)
@@ -40,34 +37,36 @@ export function QrisDisplay() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <button
-          className="fixed bottom-4 left-4 z-40 p-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg hover:shadow-xl flex items-center gap-2 text-sm font-medium"
-          title="QRIS Payment"
-        >
-          <QrCode className="h-5 w-5" />
-          <span className="hidden sm:inline">QRIS</span>
-        </button>
-      </DialogTrigger>
-      <DialogContent className="w-full max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <QrCode className="h-5 w-5" />
-            QRIS Payment
-          </DialogTitle>
-          {support.description && (
-            <DialogDescription>{support.description}</DialogDescription>
-          )}
-        </DialogHeader>
-        <div className="flex justify-center py-6">
-          <img
-            src={support.image_url}
-            alt="QRIS Code"
-            className="w-64 h-64 object-contain"
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
+    <>
+      <div
+        onClick={() => setOpen(true)}
+        className="fixed bottom-6 left-6 z-40 p-3 rounded-lg bg-card border-2 border-primary shadow-xl hover:shadow-2xl cursor-pointer transition-all duration-300 hover:scale-110 animate-pulse"
+        title="Click to view QRIS payment"
+      >
+        <img
+          src="https://ukk-api.jns23.cloud/api/support/image"
+          alt="QRIS Payment Code"
+          className="w-32 h-32 object-contain"
+        />
+      </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="w-full max-w-md">
+          <DialogHeader>
+            <DialogTitle>QRIS Payment</DialogTitle>
+            {support.description && (
+              <DialogDescription>{support.description}</DialogDescription>
+            )}
+          </DialogHeader>
+          <div className="flex justify-center py-6">
+            <img
+              src="https://ukk-api.jns23.cloud/api/support/image"
+              alt="QRIS Code"
+              className="w-80 h-80 object-contain"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
