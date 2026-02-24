@@ -263,7 +263,12 @@ function StepRow({ step, forceExpand }: { step: RichStep; forceExpand?: boolean 
     <div className={`transition-colors ${
       isPass ? "bg-success/[0.03]" : isFail ? "bg-destructive/[0.03]" : "bg-transparent"
     }`}>
-      <div className="flex items-start gap-3 px-3 py-2.5">
+      <div
+        className={`flex items-start gap-3 px-3 py-2.5 ${hasDetail && !forceExpand ? "cursor-pointer hover:bg-muted/40 transition-colors" : ""}`}
+        onClick={() => { if (hasDetail && !forceExpand) setExpanded((v) => !v) }}
+        role={hasDetail && !forceExpand ? "button" : undefined}
+        aria-expanded={hasDetail && !forceExpand ? isExpanded : undefined}
+      >
         <div className="mt-0.5 shrink-0">
           <StepStatusIcon status={step.status} />
         </div>
@@ -280,13 +285,9 @@ function StepRow({ step, forceExpand }: { step: RichStep; forceExpand?: boolean 
             </span>
           )}
           {hasDetail && !forceExpand && (
-            <button
-              onClick={() => setExpanded((v) => !v)}
-              className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-              aria-label={expanded ? "Collapse detail" : "Expand detail"}
-            >
-              {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-            </button>
+            <span className="text-muted-foreground">
+              {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            </span>
           )}
         </div>
       </div>
