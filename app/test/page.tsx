@@ -306,7 +306,7 @@ function CategoryGroup({
   cat,
   catSteps,
   showScore = false,
-  autoExpand = false,
+  autoExpand = true,
 }: {
   cat: string
   catSteps: RichStep[]
@@ -319,11 +319,6 @@ function CategoryGroup({
   const catScore = catSteps.reduce((sum, s) => sum + (s.score ?? 0), 0)
   const catMax = catSteps.reduce((sum, s) => sum + (s.max_score ?? 0), 0)
   const [isOpen, setIsOpen] = useState(autoExpand)
-
-  // If autoExpand changes to true (e.g. after validation), open
-  useEffect(() => {
-    if (autoExpand) setIsOpen(true)
-  }, [autoExpand])
 
   return (
     <div className="rounded-lg border border-border overflow-hidden">
