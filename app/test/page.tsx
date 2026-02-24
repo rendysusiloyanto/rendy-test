@@ -455,13 +455,6 @@ function TestContent() {
     stepsEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [steps])
 
-  // When a new step comes in for a category containing "PVE-RES-CORES", auto-expand it
-  useEffect(() => {
-    const proxmoxSteps = steps.filter((s) => s.category === "proxmox" || (s.step && s.step.includes("PVE-RES")))
-    if (proxmoxSteps.length > 0) {
-      setAutoExpandCats((prev) => new Set([...prev, "proxmox"]))
-    }
-  }, [steps])
 
   const validateForm = useCallback((): boolean => {
     const errors: Record<string, string> = {}
@@ -582,14 +575,6 @@ function TestContent() {
             category: data.category ?? undefined,
             score: data.score ?? undefined,
             max_score: data.max_score ?? undefined,
-          }
-
-          // Auto-expand proxmox category when PVE-RES-CORES step arrives
-          if (
-            data.step_code === "PVE-RES-CORES" ||
-            (data.category === "proxmox" && data.step_code?.startsWith("PVE-RES"))
-          ) {
-            setAutoExpandCats((prev) => new Set([...prev, "proxmox"]))
           }
 
           setState((prev) => (prev === "connecting" ? "running" : prev))
