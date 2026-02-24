@@ -147,7 +147,8 @@ function StepStatusIcon({ status }: { status: string }) {
 }
 
 function TestContent() {
-  const { isBlacklisted } = useAuth()
+  const { isBlacklisted, user } = useAuth()
+  const isGuest = user?.role === "GUEST"
   const [state, setState] = useState<TestState>("idle")
   const [steps, setSteps] = useState<TestStep[]>([])
   const [finalResult, setFinalResult] = useState<TestResult | null>(null)
@@ -241,8 +242,8 @@ function TestContent() {
     }
 
     const wsBase = API_URL.replace(/^http/, "ws")
-    const wsUrl = `${wsBase}/api/ukk/test/ws`
-    console.log("[v0] Connecting to:", wsUrl)
+    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+    const wsUrl = `${wsBase}/api/ukk/test/ws${token ? `?token=${token}` : ""}`
     
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws
@@ -415,6 +416,37 @@ function TestContent() {
             onOpenChange={setRestrictedDialogOpen}
             featureName="Test Service"
           />
+        </div>
+      </AppShell>
+    )
+  }
+
+  if (isGuest) {
+    return (
+      <AppShell>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">UKK Test Service</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Test your Proxmox, Ubuntu, WordPress, and DNS configuration
+            </p>
+          </div>
+
+          <Card className="border-border bg-card">
+            <CardContent className="flex flex-col items-center gap-4 py-12">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+                <AlertTriangle className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div className="text-center space-y-2">
+                <p className="text-lg font-semibold text-foreground">
+                  Access Not Available
+                </p>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Guest accounts cannot run the test service. Please contact your admin to upgrade your account.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </AppShell>
     )
