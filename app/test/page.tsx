@@ -23,12 +23,34 @@ import {
   Plus,
   X,
   AlertCircle,
+  Server,
+  Globe,
+  Database,
+  Wifi,
+  Code2,
+  LayoutTemplate,
 } from "lucide-react"
 import type { TestResult, TestStep } from "@/lib/types"
 
+const CATEGORY_META: Record<string, { label: string; icon: React.ReactNode }> = {
+  proxmox: { label: "Proxmox VM", icon: <Server className="h-3.5 w-3.5" /> },
+  ubuntu: { label: "Ubuntu VM", icon: <Server className="h-3.5 w-3.5" /> },
+  php: { label: "PHP", icon: <Code2 className="h-3.5 w-3.5" /> },
+  web_server: { label: "Web Server", icon: <Globe className="h-3.5 w-3.5" /> },
+  mysql: { label: "MySQL", icon: <Database className="h-3.5 w-3.5" /> },
+  wordpress: { label: "WordPress", icon: <LayoutTemplate className="h-3.5 w-3.5" /> },
+  dns: { label: "DNS", icon: <Wifi className="h-3.5 w-3.5" /> },
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
-type TestState = "idle" | "running" | "done" | "error"
+type TestState = "idle" | "connecting" | "running" | "done" | "error"
+
+interface RichStep extends TestStep {
+  category?: string
+  score?: number
+  max_score?: number
+}
 
 interface TestConfig {
   vm_proxmox: {
@@ -148,11 +170,39 @@ function StepStatusIcon({ status }: { status: string }) {
   }
 }
 
+function StepRow({ step }: { step: RichStep }) {
+  const isPass = step.status === "pass" || step.status === "success"
+  const isFail = step.status === "fail" || step.status === "failed"
+  return (
+    <div className={`flex items-start gap-3 px-3 py-2.5 transition-colors ${
+      isPass ? "bg-success/[0.03]" : isFail ? "bg-destructive/[0.03]" : "bg-transparent"
+    }`}>
+      <div className="mt-0.5 shrink-0">
+        <StepStatusIcon status={step.status} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium text-foreground leading-snug">{step.label}</p>
+          <span className="text-[10px] font-mono text-muted-foreground shrink-0">{step.step}</span>
+        </div>
+        {step.detail && (
+          <p className="text-xs text-muted-foreground mt-0.5 break-words">{step.detail}</p>
+        )}
+      </div>
+      {step.max_score != null && step.max_score > 0 && (
+        <span className={`text-xs font-mono font-semibold shrink-0 ${isPass ? "text-success" : isFail ? "text-destructive" : "text-muted-foreground"}`}>
+          {step.score ?? 0}/{step.max_score}
+        </span>
+      )}
+    </div>
+  )
+}
+
 function TestContent() {
   const { isBlacklisted, user } = useAuth()
   const isGuest = user?.role === "GUEST"
   const [state, setState] = useState<TestState>("idle")
-  const [steps, setSteps] = useState<TestStep[]>([])
+  const [steps, setSteps] = useState<RichStep[]>([])
   const [finalResult, setFinalResult] = useState<TestResult | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [restrictedDialogOpen, setRestrictedDialogOpen] = useState(false)
@@ -228,31 +278,23 @@ function TestContent() {
   }, [steps])
 
   const startTest = useCallback(() => {
-    console.log("[v0] Starting UKK test...")
-    
-    // Reset state
-    setState("running")
+    setState("connecting")
     setSteps([])
     setFinalResult(null)
     setErrorMsg(null)
 
-    // Close existing connection
     if (wsRef.current) {
-      console.log("[v0] Closing existing WebSocket connection...")
       wsRef.current.close()
       wsRef.current = null
     }
 
     const wsBase = API_URL.replace(/^http/, "ws")
     const wsUrl = `${wsBase}/api/ukk/test/ws`
-
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
-    // Connection timeout - if not opened in 10 seconds, fail
     const connectionTimeout = setTimeout(() => {
       if (ws.readyState !== WebSocket.OPEN) {
-        console.error("[v0] WebSocket connection timeout")
         ws.close()
         setState("error")
         setErrorMsg("Connection timeout - unable to reach test server")
@@ -260,30 +302,17 @@ function TestContent() {
     }, 10000)
 
     ws.onopen = () => {
-      console.log("[v0] Test WebSocket: connected successfully")
       clearTimeout(connectionTimeout)
 
-      // Send test configuration
       const phpModulesObj: Record<string, boolean> = {}
-      phpModules.forEach((mod) => {
-        phpModulesObj[mod] = true
-      })
+      phpModules.forEach((mod) => { phpModulesObj[mod] = true })
 
-      // Update DNS expected with user inputs
       const configToSend = {
         ...config,
-        php: {
-          expected: {
-            binary: true,
-            modules: phpModulesObj,
-          },
-        },
+        php: { expected: { binary: true, modules: phpModulesObj } },
         dns: {
           inputs: config.dns.inputs,
-          expected: {
-            domain: config.dns.inputs.domain,
-            ip: config.dns.inputs.ip,
-          },
+          expected: { domain: config.dns.inputs.domain, ip: config.dns.inputs.ip },
         },
       }
 
@@ -297,30 +326,35 @@ function TestContent() {
       try {
         const data = JSON.parse(event.data)
 
-        // Server event: start
+        // Server signals test has started
         if (data.event === "start") {
+          setState("running")
           return
         }
 
-        // Server event: error / stop
+        // Server error event
         if (data.event === "error") {
           setErrorMsg(data.message || "An unknown error occurred")
           setState("error")
           return
         }
 
-        // Step result message: has step_code + step_name + status
+        // Step result — has step_code + step_name + status
         if (data.step_code && data.step_name) {
-          const status: TestStep["status"] =
+          const normalized: TestStep["status"] =
             data.status === "success" ? "pass" : data.status === "failed" ? "fail" : data.status
 
-          const step: TestStep = {
+          const step: RichStep = {
             step: data.step_code,
-            label: `[${data.step_code}] ${data.step_name}`,
-            status,
+            label: `${data.step_name}`,
+            status: normalized,
             detail: data.message ?? null,
+            category: data.category ?? undefined,
+            score: data.score ?? undefined,
+            max_score: data.max_score ?? undefined,
           }
 
+          setState((prev) => (prev === "connecting" ? "running" : prev))
           setSteps((prev) => {
             const existing = prev.findIndex((s) => s.step === data.step_code)
             if (existing >= 0) {
@@ -337,15 +371,13 @@ function TestContent() {
         if (data.type === "result") {
           setFinalResult(data)
           setState("done")
-          if (data.results && data.results.length > 0) {
-            setSteps(data.results)
-          }
+          if (data.results?.length > 0) setSteps(data.results)
           return
         }
 
         // Legacy progress format
         if (data.type === "progress" && data.step && data.label) {
-          const step: TestStep = {
+          const step: RichStep = {
             step: data.step,
             label: data.label,
             status: data.status as TestStep["status"],
@@ -368,20 +400,16 @@ function TestContent() {
           setErrorMsg(data.message || "An unknown error occurred")
           setState("error")
         }
-      } catch (error) {
-        console.error("[v0] Failed to parse test message:", error)
+      } catch {
+        // ignore parse errors
       }
     }
 
     ws.onclose = (event) => {
       clearTimeout(connectionTimeout)
-
       setState((prev) => {
-        if (prev === "running") {
-          // Normal close (1000/1001) after steps arrived = done
-          if (event.code === 1000 || event.code === 1001) {
-            return "done"
-          }
+        if (prev === "running" || prev === "connecting") {
+          if (event.code === 1000 || event.code === 1001) return "done"
           setErrorMsg((prevMsg) => prevMsg || `Connection closed unexpectedly (code: ${event.code})`)
           return "error"
         }
@@ -389,8 +417,7 @@ function TestContent() {
       })
     }
 
-    ws.onerror = (error) => {
-      console.error("[v0] Test WebSocket error:", error)
+    ws.onerror = () => {
       clearTimeout(connectionTimeout)
       setState("error")
       setErrorMsg("Failed to connect to the test server - check your network connection")
@@ -399,8 +426,6 @@ function TestContent() {
   }, [config, phpModules])
 
   const handleReset = useCallback(() => {
-    console.log("[v0] Resetting test...")
-    
     if (wsRef.current) {
       wsRef.current.close()
       wsRef.current = null
@@ -414,7 +439,6 @@ function TestContent() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      console.log("[v0] Test component unmounting, cleaning up WebSocket...")
       if (wsRef.current) {
         wsRef.current.close()
         wsRef.current = null
@@ -422,8 +446,18 @@ function TestContent() {
     }
   }, [])
 
-  const passCount = steps.filter((s) => s.status === "pass").length
-  const failCount = steps.filter((s) => s.status === "fail").length
+  const passCount = steps.filter((s) => s.status === "pass" || s.status === "success").length
+  const failCount = steps.filter((s) => s.status === "fail" || s.status === "failed").length
+  const totalScore = steps.reduce((sum, s) => sum + (s.score ?? 0), 0)
+  const maxScore = steps.reduce((sum, s) => sum + (s.max_score ?? 0), 0)
+
+  // Group steps by category
+  const groupedSteps = steps.reduce<Record<string, RichStep[]>>((acc, step) => {
+    const cat = step.category ?? "other"
+    if (!acc[cat]) acc[cat] = []
+    acc[cat].push(step)
+    return acc
+  }, {})
 
   if (isBlacklisted) {
     return (
@@ -1006,162 +1040,136 @@ function TestContent() {
               </div>
             )}
 
-            {state === "running" && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 rounded-lg bg-primary/5 border border-primary/20 p-3">
-                  <Loader2 className="h-5 w-5 text-primary animate-spin shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      Test in progress...
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Checking your configuration. Please wait.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Progress summary */}
-                {steps.length > 0 && (
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <CheckCircle2 className="h-3 w-3 text-success" />
-                      {passCount} passed
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <XCircle className="h-3 w-3 text-destructive" />
-                      {failCount} failed
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      {steps.filter((s) => s.status === "checking").length}{" "}
-                      checking
-                    </span>
-                  </div>
-                )}
-
-                {/* Steps list */}
-                <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
-                  {steps.map((step) => (
-                    <div
-                      key={step.step}
-                      className={`flex items-start gap-3 rounded-lg p-2.5 transition-colors ${
-                        step.status === "checking"
-                          ? "bg-primary/5"
-                          : step.status === "pass"
-                            ? "bg-success/5"
-                            : step.status === "fail"
-                              ? "bg-destructive/5"
-                              : "bg-secondary"
-                      }`}
-                    >
-                      <div className="mt-0.5">
-                        <StepStatusIcon status={step.status} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">
-                          {step.label}
-                        </p>
-                        {step.detail && (
-                          <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">
-                            {step.detail}
-                          </p>
-                        )}
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] font-mono shrink-0 ${
-                          step.status === "pass"
-                            ? "border-success/30 text-success"
-                            : step.status === "fail"
-                              ? "border-destructive/30 text-destructive"
-                              : step.status === "checking"
-                                ? "border-primary/30 text-primary"
-                                : "border-muted-foreground/30 text-muted-foreground"
-                        }`}
-                      >
-                        {step.status}
-                      </Badge>
-                    </div>
-                  ))}
-                  <div ref={stepsEndRef} />
+            {(state === "connecting") && (
+              <div className="flex items-center gap-3 rounded-lg bg-muted border border-border p-4">
+                <Loader2 className="h-5 w-5 text-primary animate-spin shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Connecting to test server...</p>
+                  <p className="text-xs text-muted-foreground">Establishing connection, please wait.</p>
                 </div>
               </div>
             )}
 
-            {state === "done" && finalResult && (
-              <div className="space-y-5">
-                {/* Score card */}
-                <div className="flex flex-col items-center gap-3 py-4">
-                  <Trophy className="h-8 w-8 text-warning" />
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Your Score</p>
-                    <p className="text-3xl font-bold font-mono text-foreground mt-1">
-                      {finalResult.total_score}{" "}
-                      <span className="text-lg text-muted-foreground">
-                        / {finalResult.max_score}
-                      </span>
+            {state === "running" && (
+              <div className="space-y-4">
+                {/* Status banner */}
+                <div className="flex items-center gap-3 rounded-lg bg-primary/5 border border-primary/20 p-3">
+                  <Loader2 className="h-5 w-5 text-primary animate-spin shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      {steps.length === 0 ? "Test is starting..." : "Test in progress..."}
                     </p>
-                    {finalResult.percentage != null && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {finalResult.percentage.toFixed(1)}%
-                      </p>
-                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {steps.length === 0
+                        ? "The server is initializing your test."
+                        : `${steps.length} step${steps.length !== 1 ? "s" : ""} completed so far`}
+                    </p>
                   </div>
-                  {finalResult.grade && (
-                    <GradeBadge grade={finalResult.grade} />
+                  {steps.length > 0 && (
+                    <div className="flex items-center gap-3 text-xs shrink-0">
+                      <span className="flex items-center gap-1 text-success">
+                        <CheckCircle2 className="h-3 w-3" /> {passCount}
+                      </span>
+                      <span className="flex items-center gap-1 text-destructive">
+                        <XCircle className="h-3 w-3" /> {failCount}
+                      </span>
+                    </div>
                   )}
                 </div>
 
-                {/* Summary bar */}
-                <div className="flex items-center justify-center gap-6 text-sm">
-                  <span className="flex items-center gap-1.5 text-success">
-                    <CheckCircle2 className="h-4 w-4" />
-                    {passCount} passed
-                  </span>
-                  <span className="flex items-center gap-1.5 text-destructive">
-                    <XCircle className="h-4 w-4" />
-                    {failCount} failed
-                  </span>
+                {/* Grouped steps */}
+                {Object.keys(groupedSteps).length > 0 && (
+                  <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+                    {Object.entries(groupedSteps).map(([cat, catSteps]) => {
+                      const meta = CATEGORY_META[cat]
+                      const catPass = catSteps.filter((s) => s.status === "pass" || s.status === "success").length
+                      const catFail = catSteps.filter((s) => s.status === "fail" || s.status === "failed").length
+                      return (
+                        <div key={cat} className="rounded-lg border border-border overflow-hidden">
+                          <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border">
+                            <span className="text-muted-foreground">{meta?.icon}</span>
+                            <span className="text-xs font-semibold text-foreground">{meta?.label ?? cat}</span>
+                            <div className="ml-auto flex items-center gap-2 text-[10px]">
+                              <span className="text-success">{catPass} passed</span>
+                              {catFail > 0 && <span className="text-destructive">{catFail} failed</span>}
+                            </div>
+                          </div>
+                          <div className="divide-y divide-border">
+                            {catSteps.map((step) => (
+                              <StepRow key={step.step} step={step} />
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                    <div ref={stepsEndRef} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {state === "done" && (
+              <div className="space-y-5">
+                {/* Score summary */}
+                <div className="rounded-lg bg-muted/40 border border-border p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10 shrink-0">
+                      <Trophy className="h-6 w-6 text-warning" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Final Score</p>
+                      <p className="text-2xl font-bold font-mono text-foreground">
+                        {finalResult?.total_score ?? totalScore}
+                        <span className="text-base text-muted-foreground font-normal"> / {finalResult?.max_score ?? maxScore}</span>
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {finalResult?.grade && <GradeBadge grade={finalResult.grade} />}
+                      {finalResult?.percentage != null && (
+                        <p className="text-xs text-muted-foreground mt-1">{finalResult.percentage.toFixed(1)}%</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border text-xs">
+                    <span className="flex items-center gap-1 text-success">
+                      <CheckCircle2 className="h-3 w-3" /> {passCount} passed
+                    </span>
+                    <span className="flex items-center gap-1 text-destructive">
+                      <XCircle className="h-3 w-3" /> {failCount} failed
+                    </span>
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      <Clock className="h-3 w-3" /> {steps.length} total checks
+                    </span>
+                  </div>
                 </div>
 
-                {/* Results list */}
-                <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
-                  {steps.map((step) => (
-                    <div
-                      key={step.step}
-                      className={`flex items-start gap-3 rounded-lg p-2.5 ${
-                        step.status === "pass"
-                          ? "bg-success/5"
-                          : step.status === "fail"
-                            ? "bg-destructive/5"
-                            : "bg-secondary"
-                      }`}
-                    >
-                      <div className="mt-0.5">
-                        <StepStatusIcon status={step.status} />
+                {/* Grouped results */}
+                <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+                  {Object.entries(groupedSteps).map(([cat, catSteps]) => {
+                    const meta = CATEGORY_META[cat]
+                    const catPass = catSteps.filter((s) => s.status === "pass" || s.status === "success").length
+                    const catScore = catSteps.reduce((sum, s) => sum + (s.score ?? 0), 0)
+                    const catMax = catSteps.reduce((sum, s) => sum + (s.max_score ?? 0), 0)
+                    return (
+                      <div key={cat} className="rounded-lg border border-border overflow-hidden">
+                        <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border">
+                          <span className="text-muted-foreground">{meta?.icon}</span>
+                          <span className="text-xs font-semibold text-foreground">{meta?.label ?? cat}</span>
+                          <div className="ml-auto flex items-center gap-3 text-[10px] text-muted-foreground">
+                            <span>{catPass}/{catSteps.length} passed</span>
+                            {catMax > 0 && (
+                              <span className="font-mono font-medium text-foreground">{catScore}/{catMax} pts</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="divide-y divide-border">
+                          {catSteps.map((step) => (
+                            <StepRow key={step.step} step={step} />
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">
-                          {step.label}
-                        </p>
-                        {step.detail && (
-                          <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">
-                            {step.detail}
-                          </p>
-                        )}
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] font-mono shrink-0 ${
-                          step.status === "pass"
-                            ? "border-success/30 text-success"
-                            : "border-destructive/30 text-destructive"
-                        }`}
-                      >
-                        {step.status}
-                      </Badge>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 <Button
@@ -1176,55 +1184,45 @@ function TestContent() {
             )}
 
             {state === "error" && (
-              <div className="flex flex-col items-center gap-4 py-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10">
-                  <AlertTriangle className="h-6 w-6 text-destructive" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-foreground">
-                    Test Failed
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                    {errorMsg || "An unexpected error occurred."}
-                  </p>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 rounded-lg bg-destructive/5 border border-destructive/20 p-4">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive/10 shrink-0">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Connection Error</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {errorMsg || "An unexpected error occurred."}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Show steps collected so far */}
                 {steps.length > 0 && (
-                  <div className="w-full space-y-1.5 max-h-64 overflow-y-auto pr-1">
-                    {steps.map((step) => (
-                      <div
-                        key={step.step}
-                        className={`flex items-start gap-3 rounded-lg p-2.5 ${
-                          step.status === "pass"
-                            ? "bg-success/5"
-                            : step.status === "fail"
-                              ? "bg-destructive/5"
-                              : "bg-secondary"
-                        }`}
-                      >
-                        <div className="mt-0.5">
-                          <StepStatusIcon status={step.status} />
+                  <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+                    {Object.entries(groupedSteps).map(([cat, catSteps]) => {
+                      const meta = CATEGORY_META[cat]
+                      return (
+                        <div key={cat} className="rounded-lg border border-border overflow-hidden">
+                          <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border">
+                            <span className="text-muted-foreground">{meta?.icon}</span>
+                            <span className="text-xs font-semibold text-foreground">{meta?.label ?? cat}</span>
+                          </div>
+                          <div className="divide-y divide-border">
+                            {catSteps.map((step) => (
+                              <StepRow key={step.step} step={step} />
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground">
-                            {step.label}
-                          </p>
-                          {step.detail && (
-                            <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">
-                              {step.detail}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
 
                 <Button
                   onClick={handleReset}
                   variant="outline"
-                  className="border-border text-foreground hover:bg-accent"
+                  className="w-full border-border text-foreground hover:bg-accent"
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
                   Try Again
