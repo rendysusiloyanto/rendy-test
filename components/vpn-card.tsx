@@ -22,6 +22,7 @@ import {
   Activity,
   Clock,
   AlertCircle,
+  // Lock kept for cipher display below
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -46,7 +47,7 @@ function formatBytes(bytes: number): string {
 }
 
 export function VpnCard() {
-  const { isPremium, isBlacklisted, user } = useAuth()
+  const { isBlacklisted, user } = useAuth()
   const [vpnStatus, setVpnStatus] = useState<VPNStatusResponse | null>(null)
   const [statusLoading, setStatusLoading] = useState(true)
   const [creating, setCreating] = useState(false)
@@ -70,7 +71,7 @@ export function VpnCard() {
 
   // Fetch VPN status via REST
   const fetchStatus = useCallback(async () => {
-    if (!isPremium || isRestricted) {
+    if (isRestricted) {
       setStatusLoading(false)
       return
     }
@@ -99,7 +100,7 @@ export function VpnCard() {
     } finally {
       setStatusLoading(false)
     }
-  }, [isPremium, isRestricted])
+  }, [isRestricted])
 
   useEffect(() => {
     fetchStatus()
@@ -107,8 +108,7 @@ export function VpnCard() {
 
   // WebSocket for live traffic with improved reconnection logic
   useEffect(() => {
-    if (!isPremium || !vpnStatus?.has_config) {
-      console.log("[v0] VPN WebSocket: not starting (premium:", isPremium, "has_config:", vpnStatus?.has_config, ")")
+    if (!vpnStatus?.has_config) {
       return
     }
 
@@ -212,7 +212,7 @@ export function VpnCard() {
       
       reconnectAttemptsRef.current = 0
     }
-  }, [isPremium, vpnStatus?.has_config])
+  }, [vpnStatus?.has_config])
 
   const handleCreate = async () => {
     if (isBlacklisted) {
@@ -270,42 +270,6 @@ export function VpnCard() {
           </div>
         </CardContent>
       </Card>
-    )
-  }
-
-  if (!isPremium) {
-    return (
-      <>
-      <Card className="border-border bg-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base text-foreground">
-            <Shield className="h-4 w-4 text-primary" />
-            VPN Access
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center gap-3 py-4 text-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-              <Lock className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">
-                Premium Required
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                VPN access is available for premium accounts only. Contact your
-                admin for access.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <RestrictedAccessDialog
-        open={restrictedDialogOpen}
-        onOpenChange={setRestrictedDialogOpen}
-        featureName="VPN Access"
-      />
-      </>
     )
   }
 
