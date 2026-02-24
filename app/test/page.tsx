@@ -29,6 +29,8 @@ import {
   Wifi,
   Code2,
   LayoutTemplate,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react"
 import type { TestResult, TestStep } from "@/lib/types"
 
@@ -171,28 +173,48 @@ function StepStatusIcon({ status }: { status: string }) {
 }
 
 function StepRow({ step }: { step: RichStep }) {
+  const [expanded, setExpanded] = useState(false)
   const isPass = step.status === "pass" || step.status === "success"
   const isFail = step.status === "fail" || step.status === "failed"
+  const hasDetail = Boolean(step.detail)
+
   return (
-    <div className={`flex items-start gap-3 px-3 py-2.5 transition-colors ${
+    <div className={`transition-colors ${
       isPass ? "bg-success/[0.03]" : isFail ? "bg-destructive/[0.03]" : "bg-transparent"
     }`}>
-      <div className="mt-0.5 shrink-0">
-        <StepStatusIcon status={step.status} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-medium text-foreground leading-snug">{step.label}</p>
-          <span className="text-[10px] font-mono text-muted-foreground shrink-0">{step.step}</span>
+      <div className="flex items-start gap-3 px-3 py-2.5">
+        <div className="mt-0.5 shrink-0">
+          <StepStatusIcon status={step.status} />
         </div>
-        {step.detail && (
-          <p className="text-xs text-muted-foreground mt-0.5 break-words">{step.detail}</p>
-        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-foreground leading-snug">{step.label}</p>
+            <span className="text-[10px] font-mono text-muted-foreground shrink-0">{step.step}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {step.max_score != null && step.max_score > 0 && (
+            <span className={`text-xs font-mono font-semibold ${isPass ? "text-success" : isFail ? "text-destructive" : "text-muted-foreground"}`}>
+              {step.score ?? 0}/{step.max_score}
+            </span>
+          )}
+          {hasDetail && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={expanded ? "Collapse detail" : "Expand detail"}
+            >
+              {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            </button>
+          )}
+        </div>
       </div>
-      {step.max_score != null && step.max_score > 0 && (
-        <span className={`text-xs font-mono font-semibold shrink-0 ${isPass ? "text-success" : isFail ? "text-destructive" : "text-muted-foreground"}`}>
-          {step.score ?? 0}/{step.max_score}
-        </span>
+      {expanded && hasDetail && (
+        <div className="px-3 pb-2.5 -mt-1">
+          <pre className="text-xs text-muted-foreground bg-muted/50 border border-border rounded px-3 py-2 font-mono whitespace-pre-wrap break-words">
+            {step.detail}
+          </pre>
+        </div>
       )}
     </div>
   )
@@ -329,6 +351,20 @@ function TestContent() {
         // Server signals test has started
         if (data.event === "start") {
           setState("running")
+          return
+        }
+
+        // Server signals test is finished with summary
+        if (data.event === "finished" && data.summary) {
+          const s = data.summary
+          setFinalResult({
+            total_score: s.total ?? 0,
+            max_score: s.max ?? 0,
+            percentage: s.percentage ?? null,
+            grade: s.grade ?? null,
+            results: [],
+          })
+          setState("done")
           return
         }
 
@@ -656,6 +692,75 @@ function TestContent() {
                   </div>
                 </div>
 
+                {/* Proxmox expected resources */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="prox-cores" className="text-xs">Cores (expected)</Label>
+                    <Input
+                      id="prox-cores"
+                      type="number"
+                      value={config.vm_proxmox.expected.resources.cores}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          vm_proxmox: {
+                            ...config.vm_proxmox,
+                            expected: {
+                              ...config.vm_proxmox.expected,
+                              resources: { ...config.vm_proxmox.expected.resources, cores: Number(e.target.value) },
+                            },
+                          },
+                        })
+                      }
+                      placeholder="6"
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="prox-memory" className="text-xs">Memory MB (expected)</Label>
+                    <Input
+                      id="prox-memory"
+                      type="number"
+                      value={config.vm_proxmox.expected.resources.memory}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          vm_proxmox: {
+                            ...config.vm_proxmox,
+                            expected: {
+                              ...config.vm_proxmox.expected,
+                              resources: { ...config.vm_proxmox.expected.resources, memory: Number(e.target.value) },
+                            },
+                          },
+                        })
+                      }
+                      placeholder="8192"
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="prox-disk" className="text-xs">Disk Size (expected)</Label>
+                    <Input
+                      id="prox-disk"
+                      value={config.vm_proxmox.expected.resources.disk_size}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          vm_proxmox: {
+                            ...config.vm_proxmox,
+                            expected: {
+                              ...config.vm_proxmox.expected,
+                              resources: { ...config.vm_proxmox.expected.resources, disk_size: e.target.value },
+                            },
+                          },
+                        })
+                      }
+                      placeholder="32G"
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                </div>
+
                 {/* Ubuntu VM */}
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-foreground">
@@ -752,6 +857,75 @@ function TestContent() {
                           })
                         }
                         placeholder="password"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Ubuntu expected resources */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ubuntu-cores" className="text-xs">Cores (expected)</Label>
+                      <Input
+                        id="ubuntu-cores"
+                        type="number"
+                        value={config.vm_ubuntu.expected.resources.cores}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            vm_ubuntu: {
+                              ...config.vm_ubuntu,
+                              expected: {
+                                ...config.vm_ubuntu.expected,
+                                resources: { ...config.vm_ubuntu.expected.resources, cores: Number(e.target.value) },
+                              },
+                            },
+                          })
+                        }
+                        placeholder="6"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ubuntu-memory" className="text-xs">Memory MB (expected)</Label>
+                      <Input
+                        id="ubuntu-memory"
+                        type="number"
+                        value={config.vm_ubuntu.expected.resources.memory}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            vm_ubuntu: {
+                              ...config.vm_ubuntu,
+                              expected: {
+                                ...config.vm_ubuntu.expected,
+                                resources: { ...config.vm_ubuntu.expected.resources, memory: Number(e.target.value) },
+                              },
+                            },
+                          })
+                        }
+                        placeholder="6144"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ubuntu-disk" className="text-xs">Disk Size (expected)</Label>
+                      <Input
+                        id="ubuntu-disk"
+                        value={config.vm_ubuntu.expected.resources.disk_size}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            vm_ubuntu: {
+                              ...config.vm_ubuntu,
+                              expected: {
+                                ...config.vm_ubuntu.expected,
+                                resources: { ...config.vm_ubuntu.expected.resources, disk_size: e.target.value },
+                              },
+                            },
+                          })
+                        }
+                        placeholder="32G"
                         className="h-9 text-sm"
                       />
                     </div>
@@ -1123,10 +1297,10 @@ function TestContent() {
                         <span className="text-base text-muted-foreground font-normal"> / {finalResult?.max_score ?? maxScore}</span>
                       </p>
                     </div>
-                    <div className="text-right shrink-0">
+                    <div className="text-right shrink-0 space-y-1">
                       {finalResult?.grade && <GradeBadge grade={finalResult.grade} />}
                       {finalResult?.percentage != null && (
-                        <p className="text-xs text-muted-foreground mt-1">{finalResult.percentage.toFixed(1)}%</p>
+                        <p className="text-sm font-semibold font-mono text-foreground">{finalResult.percentage.toFixed(1)}%</p>
                       )}
                     </div>
                   </div>
