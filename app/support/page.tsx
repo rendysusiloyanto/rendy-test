@@ -22,6 +22,7 @@ export default function SupportPage() {
 function SupportContent() {
   const [support, setSupport] = useState<SupportResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const qrisImageUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/support/image`
 
   useEffect(() => {
     fetchSupport()
@@ -78,7 +79,7 @@ function SupportContent() {
         <CardContent className="space-y-6">
           <div className="flex justify-center">
             <img
-              src="https://ukk.jns23.cloud/api/support/image"
+              src={qrisImageUrl}
               alt="QRIS Payment Code"
               className="w-96 h-96 object-contain rounded-lg border border-border p-4 bg-white"
             />
