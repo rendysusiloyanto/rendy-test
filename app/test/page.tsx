@@ -136,8 +136,10 @@ function GradeBadge({ grade }: { grade: string }) {
 function StepStatusIcon({ status }: { status: string }) {
   switch (status) {
     case "pass":
+    case "success":
       return <CheckCircle2 className="h-4 w-4 text-success" />
     case "fail":
+    case "failed":
       return <XCircle className="h-4 w-4 text-destructive" />
     case "checking":
       return <Loader2 className="h-4 w-4 text-primary animate-spin" />
@@ -293,35 +295,76 @@ function TestContent() {
 
     ws.onmessage = (event) => {
       try {
-        const data: TestResult = JSON.parse(event.data)
-        console.log("[v0] Test message received:", data.type, data)
+        const data = JSON.parse(event.data)
 
-        if (data.type === "progress" && data.step && data.label && data.status) {
+        // Server event: start
+        if (data.event === "start") {
+          return
+        }
+
+        // Server event: error / stop
+        if (data.event === "error") {
+          setErrorMsg(data.message || "An unknown error occurred")
+          setState("error")
+          return
+        }
+
+        // Step result message: has step_code + step_name + status
+        if (data.step_code && data.step_name) {
+          const status: TestStep["status"] =
+            data.status === "success" ? "pass" : data.status === "failed" ? "fail" : data.status
+
+          const step: TestStep = {
+            step: data.step_code,
+            label: `[${data.step_code}] ${data.step_name}`,
+            status,
+            detail: data.message ?? null,
+          }
+
           setSteps((prev) => {
-            const existing = prev.findIndex((s) => s.step === data.step)
-            const updated: TestStep = {
-              step: data.step!,
-              label: data.label!,
-              status: data.status as TestStep["status"],
-              detail: data.detail ?? null,
-            }
+            const existing = prev.findIndex((s) => s.step === data.step_code)
             if (existing >= 0) {
               const next = [...prev]
-              next[existing] = updated
+              next[existing] = step
               return next
             }
-            return [...prev, updated]
+            return [...prev, step]
           })
-        } else if (data.type === "result") {
-          console.log("[v0] Test completed with result:", data)
+          return
+        }
+
+        // Final result message
+        if (data.type === "result") {
           setFinalResult(data)
           setState("done")
-          // Also update steps from results array if provided
           if (data.results && data.results.length > 0) {
             setSteps(data.results)
           }
-        } else if (data.type === "error") {
-          console.error("[v0] Test error:", data.message)
+          return
+        }
+
+        // Legacy progress format
+        if (data.type === "progress" && data.step && data.label) {
+          const step: TestStep = {
+            step: data.step,
+            label: data.label,
+            status: data.status as TestStep["status"],
+            detail: data.detail ?? null,
+          }
+          setSteps((prev) => {
+            const existing = prev.findIndex((s) => s.step === data.step)
+            if (existing >= 0) {
+              const next = [...prev]
+              next[existing] = step
+              return next
+            }
+            return [...prev, step]
+          })
+          return
+        }
+
+        // Legacy error format
+        if (data.type === "error") {
           setErrorMsg(data.message || "An unknown error occurred")
           setState("error")
         }
@@ -331,12 +374,14 @@ function TestContent() {
     }
 
     ws.onclose = (event) => {
-      console.log(`[v0] Test WebSocket closed (code: ${event.code}, reason: ${event.reason})`)
       clearTimeout(connectionTimeout)
-      
+
       setState((prev) => {
-        // Only set error if we were still running (unexpected close)
         if (prev === "running") {
+          // Normal close (1000/1001) after steps arrived = done
+          if (event.code === 1000 || event.code === 1001) {
+            return "done"
+          }
           setErrorMsg((prevMsg) => prevMsg || `Connection closed unexpectedly (code: ${event.code})`)
           return "error"
         }
