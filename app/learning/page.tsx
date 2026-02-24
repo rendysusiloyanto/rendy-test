@@ -27,7 +27,7 @@ function LearningListContent() {
 
   useEffect(() => {
     api
-      .listLearnings(true)
+      .listLearnings(false)
       .then(setLearnings)
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -104,13 +104,21 @@ function LearningListContent() {
           </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {learnings.map((item) => (
-              <Link key={item.id} href={`/learning/${item.id}`}>
-                <Card className="border-border bg-card hover:bg-accent transition-colors cursor-pointer h-full group">
+            {learnings.map((item) => {
+              const isComingSoon = !item.is_published
+              const cardContent = (
+                <Card className={`border-border bg-card h-full group transition-colors ${isComingSoon ? "opacity-70 cursor-default" : "hover:bg-accent cursor-pointer"}`}>
                   <CardContent className="p-0">
                     {/* Video thumbnail area */}
                     <div className="relative aspect-video bg-secondary rounded-t-lg flex items-center justify-center overflow-hidden">
-                      {item.video_url ? (
+                      {isComingSoon ? (
+                        <>
+                          <div className="absolute inset-0 bg-secondary" />
+                          <Badge className="relative text-[10px] font-semibold bg-muted text-muted-foreground border border-border">
+                            Coming Soon
+                          </Badge>
+                        </>
+                      ) : item.video_url ? (
                         <>
                           <div className="absolute inset-0 bg-secondary" />
                           <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 border border-primary/30 group-hover:bg-primary/30 transition-colors">
@@ -141,7 +149,7 @@ function LearningListContent() {
                             addSuffix: true,
                           })}
                         </Badge>
-                        {item.video_url && (
+                        {item.video_url && !isComingSoon && (
                           <Badge
                             variant="outline"
                             className="text-[10px] font-mono border-primary/30 text-primary"
@@ -150,12 +158,28 @@ function LearningListContent() {
                             Video
                           </Badge>
                         )}
+                        {isComingSoon && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] font-mono border-muted-foreground/30 text-muted-foreground"
+                          >
+                            Coming Soon
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              </Link>
-            ))}
+              )
+
+              return isComingSoon ? (
+                <div key={item.id}>{cardContent}</div>
+              ) : (
+                <Link key={item.id} href={`/learning/${item.id}`}>
+                  {cardContent}
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>

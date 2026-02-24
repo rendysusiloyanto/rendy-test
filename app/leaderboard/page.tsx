@@ -67,7 +67,14 @@ function LeaderboardContent() {
   useEffect(() => {
     api
       .getLeaderboard()
-      .then(setEntries)
+      .then((data) => {
+        const sorted = [...data].sort((a, b) => {
+          if (b.percentage !== a.percentage) return b.percentage - a.percentage
+          return new Date(a.completed_at).getTime() - new Date(b.completed_at).getTime()
+        })
+        const ranked = sorted.map((entry, idx) => ({ ...entry, rank: idx + 1 }))
+        setEntries(ranked)
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])

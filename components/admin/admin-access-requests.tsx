@@ -194,7 +194,7 @@ export function AdminAccessRequests() {
                                 </p>
                               </div>
 
-                              {selectedRequest.status === "pending" && (
+                              {selectedRequest.status === "PENDING" && (
                                 <div className="flex gap-2 pt-2">
                                   <Button
                                     variant="outline"
