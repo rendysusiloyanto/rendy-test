@@ -18,6 +18,8 @@ export function QrisDisplay() {
   const [support, setSupport] = useState<SupportResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
+  
+  const qrisImageUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/support/image`
 
   useEffect(() => {
     fetchSupport()
@@ -49,7 +51,7 @@ export function QrisDisplay() {
       >
         <div className="relative">
           <img
-            src="https://ukk.jns23.cloud/api/support/image"
+            src={qrisImageUrl}
             alt="QRIS Payment Code"
             className="w-48 h-48 object-contain"
           />
@@ -69,7 +71,7 @@ export function QrisDisplay() {
           </DialogHeader>
           <div className="flex justify-center py-6">
             <img
-              src="https://ukk.jns23.cloud/api/support/image"
+              src={qrisImageUrl}
               alt="QRIS Code"
               className="w-96 h-96 object-contain rounded-lg"
             />
