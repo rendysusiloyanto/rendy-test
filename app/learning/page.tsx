@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
 import { api } from "@/lib/api"
@@ -9,6 +9,11 @@ import { AppShell } from "@/components/app-shell"
 import { AuthGuard } from "@/components/auth-guard"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { RestrictedAccessDialog } from "@/components/restricted-access-dialog"
 import {
   BookOpen,
@@ -19,11 +24,20 @@ import {
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
+const STATIC_VIDEO = {
+  title: "UKK Full",
+  thumbnailUrl: `${API_URL}/static/images/ukk-full-v1.png`,
+  videoUrl: `${API_URL}/static/videos/ukk-full-v1.mp4`,
+}
+
 function LearningListContent() {
   const { isBlacklisted } = useAuth()
   const [learnings, setLearnings] = useState<LearningResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [restrictedDialogOpen, setRestrictedDialogOpen] = useState(false)
+  const [staticVideoOpen, setStaticVideoOpen] = useState(false)
+  const staticVideoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
     api
@@ -88,23 +102,43 @@ function LearningListContent() {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
-        ) : learnings.length === 0 ? (
-          <Card className="border-border bg-card">
-            <CardContent className="flex flex-col items-center gap-3 py-12">
-              <BookOpen className="h-10 w-10 text-muted-foreground" />
-              <div className="text-center">
-                <p className="text-sm font-medium text-foreground">
-                  No materials available yet
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Check back later for new learning content
-                </p>
-              </div>
-            </CardContent>
-          </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {learnings.map((item) => {
+            {/* Static video card */}
+            <Card
+              className="border-border bg-card h-full group transition-colors hover:bg-accent cursor-pointer"
+              onClick={() => setStaticVideoOpen(true)}
+            >
+              <CardContent className="p-0">
+                <div className="relative aspect-video bg-secondary rounded-t-lg flex items-center justify-center overflow-hidden">
+                  <img
+                    src={STATIC_VIDEO.thumbnailUrl}
+                    alt={STATIC_VIDEO.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
+                  <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 border border-primary/30 group-hover:bg-primary/30 transition-colors">
+                    <Play className="h-5 w-5 text-primary ml-0.5" />
+                  </div>
+                </div>
+                <div className="p-4 space-y-2">
+                  <h3 className="text-sm font-medium text-foreground line-clamp-2 text-balance">
+                    {STATIC_VIDEO.title}
+                  </h3>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-mono border-primary/30 text-primary"
+                    >
+                      <Play className="mr-1 h-2.5 w-2.5" />
+                      Video
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {learnings.length === 0 ? null : learnings.map((item) => {
               const isComingSoon = !item.is_published
               const cardContent = (
                 <Card className={`border-border bg-card h-full group transition-colors ${isComingSoon ? "opacity-70 cursor-default" : "hover:bg-accent cursor-pointer"}`}>
@@ -177,6 +211,30 @@ function LearningListContent() {
             })}
           </div>
         )}
+
+        {/* Static video popup - native controls include fullscreen */}
+        <Dialog
+          open={staticVideoOpen}
+          onOpenChange={(open) => {
+            setStaticVideoOpen(open)
+            if (!open) staticVideoRef.current?.pause()
+          }}
+        >
+          <DialogContent className="w-full max-w-4xl p-0 gap-0 overflow-hidden">
+            <DialogTitle className="sr-only">{STATIC_VIDEO.title}</DialogTitle>
+            <div className="aspect-video w-full bg-black">
+              <video
+                ref={staticVideoRef}
+                src={STATIC_VIDEO.videoUrl}
+                controls
+                className="w-full h-full"
+                playsInline
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppShell>
   )

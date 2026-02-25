@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Trophy, Loader2, Medal, Clock } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { format } from "date-fns"
 
 function getGradeColor(grade: string): string {
@@ -34,25 +34,22 @@ function getGradeColor(grade: string): string {
 function getRankDisplay(rank: number) {
   if (rank === 1) {
     return (
-      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-warning/10 border border-warning/30 gap-0.5">
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-warning/10 border border-warning/30">
         <span className="text-sm font-bold text-warning">1</span>
-        <Trophy className="h-3 w-3 text-warning" />
       </div>
     )
   }
   if (rank === 2) {
     return (
-      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted-foreground/10 border border-muted-foreground/20 gap-0.5">
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted-foreground/10 border border-muted-foreground/20">
         <span className="text-sm font-bold text-muted-foreground">2</span>
-        <Medal className="h-3 w-3 text-muted-foreground" />
       </div>
     )
   }
   if (rank === 3) {
     return (
-      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-chart-5/10 border border-chart-5/20 gap-0.5">
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-chart-5/10 border border-chart-5/20">
         <span className="text-sm font-bold text-chart-5">3</span>
-        <Medal className="h-3 w-3 text-chart-5" />
       </div>
     )
   }
