@@ -333,9 +333,13 @@ class ApiClient {
     return `${API_BASE}/api/premium/requests/${encodeURIComponent(requestId)}/image`
   }
 
-  async getPremiumRequestImageBlob(requestId: string): Promise<Blob> {
-    const url = `${API_BASE}/api/premium/requests/${encodeURIComponent(requestId)}/image`
-    const res = await fetch(url, { headers: this.authHeaders() })
+  async getPremiumRequestImageBlob(requestId: string, cacheBust?: string): Promise<Blob> {
+    const q = cacheBust ? `?t=${encodeURIComponent(cacheBust)}` : ""
+    const url = `${API_BASE}/api/premium/requests/${encodeURIComponent(requestId)}/image${q}`
+    const res = await fetch(url, {
+      headers: this.authHeaders(),
+      cache: "no-store",
+    })
     if (!res.ok) {
       const body = await res.json().catch(() => null)
       throw new ApiError(res.status, body?.detail || res.statusText, body)

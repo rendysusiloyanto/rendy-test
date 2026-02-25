@@ -35,6 +35,7 @@ function PremiumContent() {
   const [file, setFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [imageObjectUrl, setImageObjectUrl] = useState<string | null>(null)
+  const [imageRefreshKey, setImageRefreshKey] = useState(0)
 
   const isPremium = user?.is_premium ?? false
 
@@ -54,7 +55,7 @@ function PremiumContent() {
     fetchRequest()
   }, [])
 
-  // Refetch image when request changes (e.g. after updating image via PATCH)
+  // Refetch image when request loads or after updating image
   useEffect(() => {
     if (!request?.id) {
       setImageObjectUrl(null)
@@ -62,8 +63,9 @@ function PremiumContent() {
     }
     let cancelled = false
     let url: string | null = null
+    const cacheBust = `${request.updated_at ?? ""}-${imageRefreshKey}`
     api
-      .getPremiumRequestImageBlob(request.id)
+      .getPremiumRequestImageBlob(request.id, cacheBust)
       .then((blob) => {
         if (cancelled) return
         url = URL.createObjectURL(blob)
@@ -76,7 +78,7 @@ function PremiumContent() {
       cancelled = true
       if (url) URL.revokeObjectURL(url)
     }
-  }, [request?.id, request?.updated_at])
+  }, [request?.id, request?.updated_at, imageRefreshKey])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -103,6 +105,7 @@ function PremiumContent() {
       setMessage(updated.message ?? "")
       setFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ""
+      if (isUpdate && file) setImageRefreshKey((k) => k + 1)
       toast.success(isUpdate ? "Request updated" : "Request submitted")
     } catch {
       toast.error("Failed to submit request")
