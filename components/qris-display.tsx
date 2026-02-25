@@ -65,16 +65,18 @@ export function QrisDisplay() {
         <DialogContent className="w-full max-w-lg">
           <DialogHeader>
             <DialogTitle>QRIS Payment</DialogTitle>
-            {support.description && (
-              <DialogDescription>{support.description}</DialogDescription>
-            )}
           </DialogHeader>
-          <div className="flex justify-center py-6">
+          <div className="flex flex-col items-center py-6">
             <img
               src={qrisImageUrl}
               alt="QRIS Code"
               className="w-96 h-96 object-contain rounded-lg"
             />
+            {support.description && (
+              <DialogDescription className="text-center mt-4 text-sm text-muted-foreground">
+                {support.description}
+              </DialogDescription>
+            )}
           </div>
         </DialogContent>
       </Dialog>

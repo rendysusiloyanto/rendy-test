@@ -134,11 +134,6 @@ function LearningListContent() {
                       <h3 className="text-sm font-medium text-foreground line-clamp-2 text-balance">
                         {item.title}
                       </h3>
-                      {item.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          {item.description}
-                        </p>
-                      )}
                       <div className="flex items-center gap-2 pt-1">
                         <Badge
                           variant="outline"
