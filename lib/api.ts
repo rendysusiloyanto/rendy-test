@@ -15,6 +15,7 @@ import type {
   PremiumRequest,
   PremiumRequestListItem,
   PremiumRequestReview,
+  MyPremiumRequestResponse,
 } from "./types"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ""
@@ -287,9 +288,10 @@ class ApiClient {
 
   // Premium request (user)
   async getMyPremiumRequest(): Promise<PremiumRequest | null> {
-    return this.requestOptional<PremiumRequest>("/api/premium/request", {
+    const data = await this.requestOptional<MyPremiumRequestResponse>("/api/premium/request", {
       headers: this.headers(true),
     })
+    return data?.request ?? null
   }
 
   async submitPremiumRequest(file: File, message?: string): Promise<PremiumRequest> {
@@ -297,11 +299,12 @@ class ApiClient {
     formData.append("file", file)
     if (message != null && message.trim() !== "") formData.append("message", message.trim())
 
-    return this.request<PremiumRequest>("/api/premium/request", {
+    const data = await this.request<PremiumRequest | MyPremiumRequestResponse>("/api/premium/request", {
       method: "POST",
       headers: this.authHeaders(),
       body: formData,
     })
+    return "request" in data && data.request ? data.request : (data as PremiumRequest)
   }
 
   /** Update my PENDING premium request (message and/or file). Only PENDING can be updated. */
@@ -310,11 +313,12 @@ class ApiClient {
     if (message != null && message.trim() !== "") formData.append("message", message.trim())
     if (file) formData.append("file", file)
 
-    return this.request<PremiumRequest>("/api/premium/request", {
+    const data = await this.request<PremiumRequest | MyPremiumRequestResponse>("/api/premium/request", {
       method: "PATCH",
       headers: this.authHeaders(),
       body: formData,
     })
+    return "request" in data && data.request ? data.request : (data as PremiumRequest)
   }
 
   // Premium requests (admin)

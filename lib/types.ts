@@ -181,6 +181,12 @@ export interface PremiumRequest {
   image_url: string | null
   created_at: string
   updated_at: string
+  can_edit?: boolean
+}
+
+/** API response for GET /api/premium/request (wrapped in { request }) */
+export interface MyPremiumRequestResponse {
+  request: PremiumRequest
 }
 
 export interface PremiumRequestListItem {
