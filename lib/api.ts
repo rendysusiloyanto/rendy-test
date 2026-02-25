@@ -9,6 +9,7 @@ import type {
   LearningCreate,
   LearningUpdate,
   LearningResponse,
+  LearningVideoStreamUrlResponse,
   AnnouncementResponse,
   AccessRequest,
   SupportResponse,
@@ -168,22 +169,72 @@ class ApiClient {
     })
   }
 
-  async createLearning(data: LearningCreate): Promise<LearningResponse> {
+  async createLearning(form: {
+    title: string
+    description?: string | null
+    content?: string | null
+    is_published: boolean
+    is_premium?: boolean
+    thumbnail_url?: string | null
+    video_url?: string | null
+    thumbnail?: File | null
+    video?: File | null
+  }): Promise<LearningResponse> {
+    const fd = new FormData()
+    fd.append("title", form.title)
+    fd.append("is_published", String(form.is_published))
+    if (form.description != null && form.description !== "") fd.append("description", form.description)
+    if (form.content != null && form.content !== "") fd.append("content", form.content)
+    if (form.is_premium) fd.append("is_premium", "true")
+    if (form.thumbnail_url != null && form.thumbnail_url !== "") fd.append("thumbnail_url", form.thumbnail_url)
+    if (form.video_url != null && form.video_url !== "") fd.append("video_url", form.video_url)
+    if (form.thumbnail) fd.append("thumbnail", form.thumbnail)
+    if (form.video) fd.append("video", form.video)
     return this.request("/api/learning", {
       method: "POST",
-      headers: this.headers(true),
-      body: JSON.stringify(data),
+      headers: this.authHeaders(),
+      body: fd,
     })
   }
 
   async updateLearning(
     id: string,
-    data: LearningUpdate
+    form: {
+      title?: string | null
+      description?: string | null
+      content?: string | null
+      is_published?: boolean | null
+      is_premium?: boolean
+      thumbnail_url?: string | null
+      video_url?: string | null
+      thumbnail?: File | null
+      video?: File | null
+    }
   ): Promise<LearningResponse> {
+    const fd = new FormData()
+    if (form.title != null) fd.append("title", form.title)
+    if (form.description != null) fd.append("description", form.description)
+    if (form.content != null) fd.append("content", form.content)
+    if (form.is_published != null) fd.append("is_published", String(form.is_published))
+    if (form.is_premium != null) fd.append("is_premium", String(form.is_premium))
+    if (form.thumbnail_url != null) fd.append("thumbnail_url", form.thumbnail_url)
+    if (form.video_url != null) fd.append("video_url", form.video_url)
+    if (form.thumbnail) fd.append("thumbnail", form.thumbnail)
+    if (form.video) fd.append("video", form.video)
     return this.request(`/api/learning/${id}`, {
       method: "PUT",
+      headers: this.authHeaders(),
+      body: fd,
+    })
+  }
+
+  getLearningThumbnailUrl(learningId: string): string {
+    return `${API_BASE}/api/learning/${encodeURIComponent(learningId)}/thumbnail`
+  }
+
+  async getLearningVideoStreamUrl(learningId: string): Promise<LearningVideoStreamUrlResponse> {
+    return this.request(`/api/learning/${learningId}/video-stream-url`, {
       headers: this.headers(true),
-      body: JSON.stringify(data),
     })
   }
 

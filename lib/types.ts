@@ -86,11 +86,13 @@ export interface LeaderboardEntry {
   completed_at: string
 }
 
-// Learning types
+// Learning types (form state; API uses multipart)
 export interface LearningCreate {
   title: string
   description?: string | null
+  content?: string | null
   video_url?: string | null
+  thumbnail_url?: string | null
   is_published: boolean
   is_premium?: boolean
 }
@@ -98,7 +100,9 @@ export interface LearningCreate {
 export interface LearningUpdate {
   title?: string | null
   description?: string | null
+  content?: string | null
   video_url?: string | null
+  thumbnail_url?: string | null
   is_published?: boolean | null
   is_premium?: boolean
 }
@@ -107,11 +111,20 @@ export interface LearningResponse {
   id: string
   title: string
   description: string | null
+  content?: string | null
   video_url: string | null
+  thumbnail?: string | null
+  video_id?: string | null
+  video_stream_url?: string | null
   is_published: boolean
   is_premium?: boolean
   created_at: string
   updated_at: string
+}
+
+export interface LearningVideoStreamUrlResponse {
+  url: string
+  expires_in_minutes: number
 }
 
 // Announcement types

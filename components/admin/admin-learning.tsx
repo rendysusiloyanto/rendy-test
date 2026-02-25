@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { api } from "@/lib/api"
 import type { LearningResponse } from "@/lib/types"
 import { Button } from "@/components/ui/button"
@@ -28,7 +28,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { BookOpen, Plus, Pencil, Trash2, Loader2, Eye, EyeOff } from "lucide-react"
+import { BookOpen, Plus, Pencil, Trash2, Loader2, Eye, EyeOff, Upload, ImageIcon, Video } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 
@@ -42,9 +42,15 @@ export function AdminLearning() {
   // Form
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
+  const [content, setContent] = useState("")
   const [videoUrl, setVideoUrl] = useState("")
+  const [thumbnailUrl, setThumbnailUrl] = useState("")
   const [isPublished, setIsPublished] = useState(false)
   const [isPremium, setIsPremium] = useState(false)
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
+  const [videoFile, setVideoFile] = useState<File | null>(null)
+  const thumbnailInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
 
   const fetchItems = useCallback(async () => {
     try {
@@ -64,9 +70,15 @@ export function AdminLearning() {
   const resetForm = () => {
     setTitle("")
     setDescription("")
+    setContent("")
     setVideoUrl("")
+    setThumbnailUrl("")
     setIsPublished(false)
     setIsPremium(false)
+    setThumbnailFile(null)
+    setVideoFile(null)
+    if (thumbnailInputRef.current) thumbnailInputRef.current.value = ""
+    if (videoInputRef.current) videoInputRef.current.value = ""
     setEditingId(null)
   }
 
@@ -79,9 +91,15 @@ export function AdminLearning() {
     setEditingId(item.id)
     setTitle(item.title)
     setDescription(item.description || "")
+    setContent(item.content || "")
     setVideoUrl(item.video_url || "")
+    setThumbnailUrl("")
     setIsPublished(item.is_published)
     setIsPremium(item.is_premium ?? false)
+    setThumbnailFile(null)
+    setVideoFile(null)
+    if (thumbnailInputRef.current) thumbnailInputRef.current.value = ""
+    if (videoInputRef.current) videoInputRef.current.value = ""
     setDialogOpen(true)
   }
 
@@ -97,18 +115,26 @@ export function AdminLearning() {
         await api.updateLearning(editingId, {
           title,
           description: description || null,
+          content: content || null,
           video_url: videoUrl || null,
+          thumbnail_url: thumbnailUrl || null,
           is_published: isPublished,
           is_premium: isPremium,
+          thumbnail: thumbnailFile || undefined,
+          video: videoFile || undefined,
         })
         toast.success("Learning updated")
       } else {
         await api.createLearning({
           title,
           description: description || null,
+          content: content || null,
           video_url: videoUrl || null,
+          thumbnail_url: thumbnailUrl || null,
           is_published: isPublished,
           is_premium: isPremium,
+          thumbnail: thumbnailFile || undefined,
+          video: videoFile || undefined,
         })
         toast.success("Learning created")
       }
@@ -189,18 +215,77 @@ export function AdminLearning() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Brief description..."
+                  rows={2}
+                  className="bg-secondary border-border text-foreground resize-none"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-foreground">Content (long-form)</Label>
+                <Textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Optional long-form content..."
                   rows={3}
                   className="bg-secondary border-border text-foreground resize-none"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm text-foreground">Video URL</Label>
+                <Label className="text-sm text-foreground">Thumbnail URL (external)</Label>
+                <Input
+                  value={thumbnailUrl}
+                  onChange={(e) => setThumbnailUrl(e.target.value)}
+                  placeholder="https://... or upload file below"
+                  className="bg-secondary border-border text-foreground"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-foreground">Thumbnail (image file)</Label>
+                <input
+                  ref={thumbnailInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => setThumbnailFile(e.target.files?.[0] ?? null)}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-border"
+                  onClick={() => thumbnailInputRef.current?.click()}
+                >
+                  <ImageIcon className="mr-2 h-4 w-4" />
+                  {thumbnailFile ? thumbnailFile.name : "Choose thumbnail image"}
+                </Button>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-foreground">Video URL (external, e.g. YouTube)</Label>
                 <Input
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
                   placeholder="https://youtube.com/watch?v=..."
                   className="bg-secondary border-border text-foreground"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-foreground">Video (upload file, premium stream)</Label>
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-border"
+                  onClick={() => videoInputRef.current?.click()}
+                >
+                  <Video className="mr-2 h-4 w-4" />
+                  {videoFile ? videoFile.name : "Choose video file"}
+                </Button>
               </div>
               <div className="flex items-center justify-between">
                 <Label className="text-sm text-foreground">Published</Label>

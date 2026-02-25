@@ -25,6 +25,12 @@ import {
 import { formatDistanceToNow } from "date-fns"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || ""
+
+function getLearningThumbnailSrc(item: LearningResponse): string | null {
+  if (!item.thumbnail) return null
+  return item.thumbnail.startsWith("http") ? item.thumbnail : `${API_URL}${item.thumbnail}`
+}
+
 const STATIC_VIDEO = {
   title: "UKK Full",
   thumbnailUrl: `${API_URL}/static/images/ukk-full-v1.png`,
@@ -145,22 +151,31 @@ function LearningListContent() {
                   <CardContent className="p-0">
                     {/* Video thumbnail area */}
                     <div className="relative aspect-video bg-secondary rounded-t-lg flex items-center justify-center overflow-hidden">
+                      {getLearningThumbnailSrc(item) && (
+                        <img
+                          src={getLearningThumbnailSrc(item)!}
+                          alt=""
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                      )}
                       {isComingSoon ? (
                         <>
-                          <div className="absolute inset-0 bg-secondary" />
+                          <div className="absolute inset-0 bg-secondary/80" />
                           <Badge className="relative text-[10px] font-semibold bg-muted text-muted-foreground border border-border">
                             Coming Soon
                           </Badge>
                         </>
-                      ) : item.video_url ? (
+                      ) : (item.video_url || item.video_id) ? (
                         <>
-                          <div className="absolute inset-0 bg-secondary" />
+                          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
                           <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 border border-primary/30 group-hover:bg-primary/30 transition-colors">
                             <Play className="h-4 w-4 text-primary ml-0.5" />
                           </div>
                         </>
-                      ) : (
+                      ) : !getLearningThumbnailSrc(item) ? (
                         <BookOpen className="h-8 w-8 text-muted-foreground" />
+                      ) : (
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
                       )}
                     </div>
 
@@ -178,7 +193,7 @@ function LearningListContent() {
                             addSuffix: true,
                           })}
                         </Badge>
-                        {item.video_url && !isComingSoon && (
+                        {(item.video_url || item.video_id) && !isComingSoon && (
                           <Badge
                             variant="outline"
                             className="text-[10px] font-mono border-primary/30 text-primary"
