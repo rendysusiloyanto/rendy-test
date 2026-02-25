@@ -30,6 +30,7 @@ import {
   Key,
   FlaskConical,
   HelpCircle,
+  Crown,
 } from "lucide-react"
 import { useState, type ReactNode } from "react"
 
@@ -38,6 +39,7 @@ const navigation = [
   { name: "Learning", href: "/learning", icon: BookOpen },
   { name: "Test", href: "/test", icon: FlaskConical },
   { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
+  { name: "Premium", href: "/premium", icon: Crown },
   { name: "Support", href: "/support", icon: HelpCircle },
 ]
 

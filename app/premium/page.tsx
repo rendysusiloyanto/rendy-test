@@ -206,13 +206,17 @@ function PremiumContent() {
 
       {canSubmit && (
         <Card className="border-border bg-card">
-          <CardContent className="p-4 pt-4">
+          <CardContent className="p-5">
+            <h2 className="text-lg font-semibold text-foreground mb-4">
+              Upload proof & message
+            </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-sm text-foreground">
-                  Transfer proof image <span className="text-destructive">*</span>
+                <Label htmlFor="premium-file" className="text-sm text-foreground">
+                  Transfer proof image (screenshot) <span className="text-destructive">*</span>
                 </Label>
                 <input
+                  id="premium-file"
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
@@ -231,8 +235,11 @@ function PremiumContent() {
                 </Button>
               </div>
               <div className="space-y-2">
-                <Label className="text-sm text-foreground">Message (optional)</Label>
+                <Label htmlFor="premium-message" className="text-sm text-foreground">
+                  Message (optional)
+                </Label>
                 <Textarea
+                  id="premium-message"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="e.g. Transfer date, bank name..."
