@@ -304,6 +304,19 @@ class ApiClient {
     })
   }
 
+  /** Update my PENDING premium request (message and/or file). Only PENDING can be updated. */
+  async updateMyPremiumRequest(message?: string, file?: File): Promise<PremiumRequest> {
+    const formData = new FormData()
+    if (message != null && message.trim() !== "") formData.append("message", message.trim())
+    if (file) formData.append("file", file)
+
+    return this.request<PremiumRequest>("/api/premium/request", {
+      method: "PATCH",
+      headers: this.authHeaders(),
+      body: formData,
+    })
+  }
+
   // Premium requests (admin)
   async adminListPremiumRequests(statusFilter?: string | null): Promise<PremiumRequestListItem[]> {
     const q = statusFilter ? `?status_filter=${encodeURIComponent(statusFilter)}` : ""

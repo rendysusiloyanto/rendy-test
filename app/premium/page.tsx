@@ -79,18 +79,30 @@ function PremiumContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file) {
-      toast.error("Please select a transfer proof image")
-      return
+    const isUpdate = request?.status === "PENDING"
+
+    if (isUpdate) {
+      if (!file && (message ?? "") === (request.message ?? "")) {
+        toast.error("Change the message or choose a new image to update")
+        return
+      }
+    } else {
+      if (!file) {
+        toast.error("Please select a transfer proof image")
+        return
+      }
     }
+
     setSubmitting(true)
     try {
-      const updated = await api.submitPremiumRequest(file, message || undefined)
+      const updated = isUpdate
+        ? await api.updateMyPremiumRequest(message || undefined, file || undefined)
+        : await api.submitPremiumRequest(file!, message || undefined)
       setRequest(updated)
-      setMessage("")
+      setMessage(updated.message ?? "")
       setFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ""
-      toast.success(request ? "Request updated" : "Request submitted")
+      toast.success(isUpdate ? "Request updated" : "Request submitted")
     } catch {
       toast.error("Failed to submit request")
     } finally {
@@ -173,9 +185,11 @@ function PremiumContent() {
         </p>
       </div>
 
-      {request && (
+      {/* Show existing request so user can see they already sent and see status */}
+      {request ? (
         <Card className="border-border bg-card">
           <CardContent className="p-4 space-y-3">
+            <h2 className="text-sm font-semibold text-foreground">Your premium request</h2>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Status</span>
               {statusBadge()}
@@ -203,17 +217,28 @@ function PremiumContent() {
             )}
           </CardContent>
         </Card>
+      ) : (
+        <Card className="border-border bg-card border-dashed">
+          <CardContent className="py-6 text-center">
+            <p className="text-sm text-muted-foreground">You have not submitted a premium request yet. Use the form below to submit.</p>
+          </CardContent>
+        </Card>
       )}
 
       <Card className="border-border bg-card">
         <CardContent className="p-5">
           <h2 className="text-lg font-semibold text-foreground mb-4">
-            Upload proof & message
+            {request?.status === "PENDING" ? "Update proof & message" : "Upload proof & message"}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="premium-file" className="text-sm text-foreground">
-                Transfer proof image (screenshot) <span className="text-destructive">*</span>
+                Transfer proof image (screenshot)
+                {request?.status === "PENDING" ? (
+                  <span className="text-muted-foreground font-normal"> (optional – leave empty to keep current)</span>
+                ) : (
+                  <span className="text-destructive"> *</span>
+                )}
               </Label>
               <input
                 id="premium-file"
