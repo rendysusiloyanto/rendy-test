@@ -44,6 +44,7 @@ export function AdminLearning() {
   const [description, setDescription] = useState("")
   const [videoUrl, setVideoUrl] = useState("")
   const [isPublished, setIsPublished] = useState(false)
+  const [isPremium, setIsPremium] = useState(false)
 
   const fetchItems = useCallback(async () => {
     try {
@@ -65,6 +66,7 @@ export function AdminLearning() {
     setDescription("")
     setVideoUrl("")
     setIsPublished(false)
+    setIsPremium(false)
     setEditingId(null)
   }
 
@@ -79,6 +81,7 @@ export function AdminLearning() {
     setDescription(item.description || "")
     setVideoUrl(item.video_url || "")
     setIsPublished(item.is_published)
+    setIsPremium(item.is_premium ?? false)
     setDialogOpen(true)
   }
 
@@ -96,7 +99,7 @@ export function AdminLearning() {
           description: description || null,
           video_url: videoUrl || null,
           is_published: isPublished,
-          is_premium: true,
+          is_premium: isPremium,
         })
         toast.success("Learning updated")
       } else {
@@ -105,7 +108,7 @@ export function AdminLearning() {
           description: description || null,
           video_url: videoUrl || null,
           is_published: isPublished,
-          is_premium: true,
+          is_premium: isPremium,
         })
         toast.success("Learning created")
       }
@@ -204,6 +207,13 @@ export function AdminLearning() {
                 <Switch
                   checked={isPublished}
                   onCheckedChange={setIsPublished}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm text-foreground">Premium</Label>
+                <Switch
+                  checked={isPremium}
+                  onCheckedChange={setIsPremium}
                 />
               </div>
               <Button
