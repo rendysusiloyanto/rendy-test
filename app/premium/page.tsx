@@ -54,6 +54,7 @@ function PremiumContent() {
     fetchRequest()
   }, [])
 
+  // Refetch image when request changes (e.g. after updating image via PATCH)
   useEffect(() => {
     if (!request?.id) {
       setImageObjectUrl(null)
@@ -75,7 +76,7 @@ function PremiumContent() {
       cancelled = true
       if (url) URL.revokeObjectURL(url)
     }
-  }, [request?.id])
+  }, [request?.id, request?.updated_at])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
