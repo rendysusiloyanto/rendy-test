@@ -154,7 +154,7 @@ function PremiumContent() {
     }
   }
 
-  const canSubmit = !request || request.status === "PENDING" || request.status === "REJECTED"
+  const canUpdateRequest = request && (request.status === "PENDING" || request.status === "REJECTED")
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
@@ -204,57 +204,55 @@ function PremiumContent() {
         </Card>
       )}
 
-      {canSubmit && (
-        <Card className="border-border bg-card">
-          <CardContent className="p-5">
-            <h2 className="text-lg font-semibold text-foreground mb-4">
-              Upload proof & message
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="premium-file" className="text-sm text-foreground">
-                  Transfer proof image (screenshot) <span className="text-destructive">*</span>
-                </Label>
-                <input
-                  id="premium-file"
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full border-border"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  {file ? file.name : "Choose image"}
-                </Button>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="premium-message" className="text-sm text-foreground">
-                  Message (optional)
-                </Label>
-                <Textarea
-                  id="premium-message"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="e.g. Transfer date, bank name..."
-                  rows={3}
-                  className="bg-secondary border-border text-foreground resize-none"
-                />
-              </div>
-              <Button type="submit" disabled={submitting} className="w-full">
-                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {request?.status === "PENDING" ? "Update request" : "Submit request"}
+      <Card className="border-border bg-card">
+        <CardContent className="p-5">
+          <h2 className="text-lg font-semibold text-foreground mb-4">
+            Upload proof & message
+          </h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="premium-file" className="text-sm text-foreground">
+                Transfer proof image (screenshot) <span className="text-destructive">*</span>
+              </Label>
+              <input
+                id="premium-file"
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full border-border"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {file ? file.name : "Choose image"}
               </Button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="premium-message" className="text-sm text-foreground">
+                Message (optional)
+              </Label>
+              <Textarea
+                id="premium-message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="e.g. Transfer date, bank name..."
+                rows={3}
+                className="bg-secondary border-border text-foreground resize-none"
+              />
+            </div>
+            <Button type="submit" disabled={submitting} className="w-full">
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {canUpdateRequest ? "Update request" : "Submit request"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }
