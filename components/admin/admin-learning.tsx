@@ -96,6 +96,7 @@ export function AdminLearning() {
           description: description || null,
           video_url: videoUrl || null,
           is_published: isPublished,
+          is_premium: true,
         })
         toast.success("Learning updated")
       } else {
@@ -104,6 +105,7 @@ export function AdminLearning() {
           description: description || null,
           video_url: videoUrl || null,
           is_published: isPublished,
+          is_premium: true,
         })
         toast.success("Learning created")
       }

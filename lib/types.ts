@@ -92,6 +92,7 @@ export interface LearningCreate {
   description?: string | null
   video_url?: string | null
   is_published: boolean
+  is_premium?: boolean
 }
 
 export interface LearningUpdate {
@@ -99,6 +100,7 @@ export interface LearningUpdate {
   description?: string | null
   video_url?: string | null
   is_published?: boolean | null
+  is_premium?: boolean
 }
 
 export interface LearningResponse {
