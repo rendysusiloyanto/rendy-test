@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   title: "UKK Lab - Competency Exam Platform",
   description:
     "Platform untuk ujian kompetensi keahlian SMK - VPN access, learning, dan test service",
+  icons: {
+    icon: "/icon.svg",
+  },
 }
 
 export const viewport: Viewport = {

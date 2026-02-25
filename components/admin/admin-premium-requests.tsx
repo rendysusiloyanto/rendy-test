@@ -18,10 +18,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog"
 import { Loader2, CheckCircle, XCircle, Clock, ImageIcon } from "lucide-react"
 import { toast } from "sonner"
-import { format } from "date-fns"
+import { safeFormat } from "@/lib/utils"
 
 type StatusFilter = "all" | "PENDING" | "APPROVED" | "REJECTED"
 
@@ -32,6 +33,7 @@ export function AdminPremiumRequests() {
   const [imageDialogRequestId, setImageDialogRequestId] = useState<string | null>(null)
   const [imageObjectUrl, setImageObjectUrl] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [cardImageUrls, setCardImageUrls] = useState<Record<string, string>>({})
 
   const fetchRequests = async () => {
     setLoading(true)
@@ -50,6 +52,20 @@ export function AdminPremiumRequests() {
   useEffect(() => {
     fetchRequests()
   }, [statusFilter])
+
+  // Load thumbnail for each request (image on left)
+  useEffect(() => {
+    requests.forEach((req) => {
+      const id = req.id
+      api
+        .getPremiumRequestImageBlob(id)
+        .then((blob) => {
+          const url = URL.createObjectURL(blob)
+          setCardImageUrls((prev) => (prev[id] ? prev : { ...prev, [id]: url }))
+        })
+        .catch(() => {})
+    })
+  }, [requests])
 
   // Load image when dialog opens
   useEffect(() => {
@@ -160,10 +176,30 @@ export function AdminPremiumRequests() {
       ) : (
         <div className="space-y-3">
           {requests.map((req) => (
-            <Card key={req.id} className="border-border bg-card">
-              <CardContent className="p-4">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0 space-y-1">
+            <Card key={req.id} className="border-border bg-card overflow-hidden">
+              <CardContent className="p-0 flex">
+                {/* Proof image on the left */}
+                <div
+                  className="w-40 sm:w-48 flex-shrink-0 bg-secondary flex items-center justify-center cursor-pointer min-h-[120px]"
+                  onClick={() => setImageDialogRequestId(req.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === "Enter" && setImageDialogRequestId(req.id)}
+                  aria-label="View full transfer proof"
+                >
+                  {cardImageUrls[req.id] ? (
+                    <img
+                      src={cardImageUrls[req.id]}
+                      alt="Transfer proof"
+                      className="w-full h-full object-contain max-h-40"
+                    />
+                  ) : (
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+                {/* User info and actions on the right */}
+                <div className="flex-1 min-w-0 p-4 flex flex-wrap items-start justify-between gap-3 rounded-r-lg">
+                  <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h4 className="text-sm font-semibold text-foreground">
                         {req.user_full_name}
@@ -177,9 +213,9 @@ export function AdminPremiumRequests() {
                       </p>
                     )}
                     <p className="text-[10px] text-muted-foreground mt-2">
-                      {format(new Date(req.created_at), "dd MMM yyyy HH:mm")}
-                      {req.updated_at !== req.created_at &&
-                        ` · Updated ${format(new Date(req.updated_at), "dd MMM HH:mm")}`}
+                      {safeFormat(req.created_at, "dd MMM yyyy HH:mm")}
+                      {req.updated_at != null && req.updated_at !== req.created_at &&
+                        ` · Updated ${safeFormat(req.updated_at, "dd MMM HH:mm")}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -190,7 +226,7 @@ export function AdminPremiumRequests() {
                       onClick={() => setImageDialogRequestId(req.id)}
                     >
                       <ImageIcon className="mr-1 h-3.5 w-3.5" />
-                      View proof
+                      View full
                     </Button>
                     {req.status === "PENDING" && (
                       <>
@@ -232,6 +268,9 @@ export function AdminPremiumRequests() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Transfer proof</DialogTitle>
+            <DialogDescription>
+              Uploaded transfer proof image. Click outside or close to dismiss.
+            </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center bg-secondary rounded-lg min-h-[200px] p-4">
             {imageObjectUrl ? (

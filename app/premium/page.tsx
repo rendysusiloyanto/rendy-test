@@ -42,6 +42,7 @@ function PremiumContent() {
     try {
       const data = await api.getMyPremiumRequest()
       setRequest(data)
+      if (data?.message != null) setMessage(data.message)
     } catch {
       toast.error("Failed to load premium request")
     } finally {
