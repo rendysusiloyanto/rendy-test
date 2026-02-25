@@ -6,6 +6,7 @@ import { AuthGuard } from "@/components/auth-guard"
 import { VpnCard } from "@/components/vpn-card"
 import { AnnouncementsList } from "@/components/announcements-list"
 import { AccessRequestCard } from "@/components/access-request-card"
+import { PremiumRequestCard } from "@/components/premium-request-card"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
@@ -26,6 +27,7 @@ function DashboardContent() {
     <AppShell>
       <div className="space-y-6">
         <AccessRequestCard />
+        <PremiumRequestCard />
         {/* Welcome header */}
         <div>
           <h1 className="text-2xl font-bold text-foreground">

@@ -12,6 +12,9 @@ import type {
   AnnouncementResponse,
   AccessRequest,
   SupportResponse,
+  PremiumRequest,
+  PremiumRequestListItem,
+  PremiumRequestReview,
 } from "./types"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ""
@@ -42,6 +45,18 @@ class ApiClient {
     // Handle full URLs (starting with http/https)
     const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`
     const res = await fetch(fullUrl, init)
+    if (!res.ok) {
+      const body = await res.json().catch(() => null)
+      throw new ApiError(res.status, body?.detail || res.statusText, body)
+    }
+    const text = await res.text()
+    return text ? JSON.parse(text) : ({} as T)
+  }
+
+  private async requestOptional<T>(url: string, init?: RequestInit): Promise<T | null> {
+    const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`
+    const res = await fetch(fullUrl, init)
+    if (res.status === 404) return null
     if (!res.ok) {
       const body = await res.json().catch(() => null)
       throw new ApiError(res.status, body?.detail || res.statusText, body)
@@ -267,6 +282,55 @@ class ApiClient {
       method: "PATCH",
       headers: this.headers(true),
       body: JSON.stringify({ body: message ?? "", status }),
+    })
+  }
+
+  // Premium request (user)
+  async getMyPremiumRequest(): Promise<PremiumRequest | null> {
+    return this.requestOptional<PremiumRequest>("/api/premium/request", {
+      headers: this.headers(true),
+    })
+  }
+
+  async submitPremiumRequest(file: File, message?: string): Promise<PremiumRequest> {
+    const formData = new FormData()
+    formData.append("file", file)
+    if (message != null && message.trim() !== "") formData.append("message", message.trim())
+
+    return this.request<PremiumRequest>("/api/premium/request", {
+      method: "POST",
+      headers: this.authHeaders(),
+      body: formData,
+    })
+  }
+
+  // Premium requests (admin)
+  async adminListPremiumRequests(statusFilter?: string | null): Promise<PremiumRequestListItem[]> {
+    const q = statusFilter ? `?status_filter=${encodeURIComponent(statusFilter)}` : ""
+    return this.request<PremiumRequestListItem[]>(`/api/premium/requests${q}`, {
+      headers: this.headers(true),
+    })
+  }
+
+  getPremiumRequestImageUrl(requestId: string): string {
+    return `${API_BASE}/api/premium/requests/${encodeURIComponent(requestId)}/image`
+  }
+
+  async getPremiumRequestImageBlob(requestId: string): Promise<Blob> {
+    const url = `${API_BASE}/api/premium/requests/${encodeURIComponent(requestId)}/image`
+    const res = await fetch(url, { headers: this.authHeaders() })
+    if (!res.ok) {
+      const body = await res.json().catch(() => null)
+      throw new ApiError(res.status, body?.detail || res.statusText, body)
+    }
+    return res.blob()
+  }
+
+  async adminReviewPremiumRequest(requestId: string, data: PremiumRequestReview): Promise<PremiumRequestListItem> {
+    return this.request<PremiumRequestListItem>(`/api/premium/requests/${requestId}`, {
+      method: "PATCH",
+      headers: this.headers(true),
+      body: JSON.stringify(data),
     })
   }
 

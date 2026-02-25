@@ -9,7 +9,8 @@ import { AdminAnnouncements } from "@/components/admin/admin-announcements"
 import { AdminUsers } from "@/components/admin/admin-users"
 import { AdminAccessRequests } from "@/components/admin/admin-access-requests"
 import { AdminSupport } from "@/components/admin/admin-support"
-import { Server, BookOpen, Megaphone, Users, Clock, QrCode } from "lucide-react"
+import { AdminPremiumRequests } from "@/components/admin/admin-premium-requests"
+import { Server, BookOpen, Megaphone, Users, Clock, QrCode, Crown } from "lucide-react"
 
 function AdminContent() {
   return (
@@ -37,6 +38,13 @@ function AdminContent() {
             >
               <Clock className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Access Requests</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="premium-requests"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-muted-foreground"
+            >
+              <Crown className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Premium Requests</span>
             </TabsTrigger>
             <TabsTrigger
               value="nodes"
@@ -72,6 +80,9 @@ function AdminContent() {
           </TabsContent>
           <TabsContent value="access-requests" className="mt-6">
             <AdminAccessRequests />
+          </TabsContent>
+          <TabsContent value="premium-requests" className="mt-6">
+            <AdminPremiumRequests />
           </TabsContent>
           <TabsContent value="nodes" className="mt-6">
             <AdminNodes />

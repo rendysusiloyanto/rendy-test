@@ -173,6 +173,32 @@ export interface SupportResponse {
   image_url: string | null
 }
 
+// Premium request types (user: my request; admin: list item)
+export interface PremiumRequest {
+  id: string
+  status: "PENDING" | "APPROVED" | "REJECTED"
+  message: string | null
+  image_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PremiumRequestListItem {
+  id: string
+  user_id: string
+  user_email: string
+  user_full_name: string
+  message: string | null
+  status: "PENDING" | "APPROVED" | "REJECTED"
+  image_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PremiumRequestReview {
+  status: "APPROVED" | "REJECTED"
+}
+
 // Validation
 export interface ValidationError {
   loc: (string | number)[]
