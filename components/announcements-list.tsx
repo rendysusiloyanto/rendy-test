@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Megaphone, Paperclip, Loader2, ChevronRight } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
+import { safeFormatDistanceToNow } from "@/lib/utils"
 
 export function AnnouncementsList() {
   const [announcements, setAnnouncements] = useState<AnnouncementResponse[]>([])
@@ -81,9 +81,7 @@ export function AnnouncementsList() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {formatDistanceToNow(new Date(a.created_at), {
-                    addSuffix: true,
-                  })}
+                  {safeFormatDistanceToNow(a.created_at, { addSuffix: true })}
                 </p>
               </div>
               <ChevronRight

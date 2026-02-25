@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Upload, CheckCircle, XCircle, Clock } from "lucide-react"
 import { toast } from "sonner"
-import { format } from "date-fns"
+import { safeFormat } from "@/lib/utils"
 
 export function PremiumRequestCard() {
   const { user } = useAuth()
@@ -148,9 +148,9 @@ export function PremiumRequestCard() {
               </p>
             )}
             <p className="text-muted-foreground">
-              Submitted: {format(new Date(request.created_at), "dd MMM yyyy HH:mm")}
-              {request.updated_at !== request.created_at &&
-                ` · Updated: ${format(new Date(request.updated_at), "dd MMM yyyy HH:mm")}`}
+              Submitted: {safeFormat(request.created_at, "dd MMM yyyy HH:mm")}
+              {request.updated_at != null && request.updated_at !== request.created_at &&
+                ` · Updated: ${safeFormat(request.updated_at, "dd MMM yyyy HH:mm")}`}
             </p>
             {imageObjectUrl && (
               <div className="pt-2">
