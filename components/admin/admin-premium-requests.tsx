@@ -23,12 +23,12 @@ import { Loader2, CheckCircle, XCircle, Clock, ImageIcon } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
 
-type StatusFilter = "" | "PENDING" | "APPROVED" | "REJECTED"
+type StatusFilter = "all" | "PENDING" | "APPROVED" | "REJECTED"
 
 export function AdminPremiumRequests() {
   const [requests, setRequests] = useState<PremiumRequestListItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("")
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [imageDialogRequestId, setImageDialogRequestId] = useState<string | null>(null)
   const [imageObjectUrl, setImageObjectUrl] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
@@ -37,7 +37,7 @@ export function AdminPremiumRequests() {
     setLoading(true)
     try {
       const data = await api.adminListPremiumRequests(
-        statusFilter === "" ? undefined : statusFilter
+        statusFilter === "all" ? undefined : statusFilter
       )
       setRequests(data)
     } catch {
@@ -142,7 +142,7 @@ export function AdminPremiumRequests() {
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All statuses</SelectItem>
+            <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="PENDING">Pending</SelectItem>
             <SelectItem value="APPROVED">Approved</SelectItem>
             <SelectItem value="REJECTED">Rejected</SelectItem>
