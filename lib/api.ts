@@ -222,7 +222,7 @@ class ApiClient {
     if (form.thumbnail) fd.append("thumbnail", form.thumbnail)
     if (form.video) fd.append("video", form.video)
     return this.request(`/api/learning/${id}`, {
-      method: "PUT",
+      method: "PATCH",
       headers: this.authHeaders(),
       body: fd,
     })
