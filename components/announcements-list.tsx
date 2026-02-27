@@ -18,7 +18,7 @@ function isImageFilename(filename: string): boolean {
 }
 
 /** Titles containing these keywords (case-insensitive) are shown in the "Prediksi Soal UKK" card. */
-const FEATURED_KEYWORDS = ["Prediksi Soal UKK"]
+const FEATURED_KEYWORDS = ["prediksi","soal","ukk"]
 
 function isFeaturedAnnouncement(a: AnnouncementResponse): boolean {
   const t = a.title.toLowerCase()
@@ -177,7 +177,7 @@ export function AnnouncementsList() {
       setInlineImageLoading(null)
       return
     }
-    if (inlineImage?.announcementId === expanded) {
+    if (inlineImageUrlRef.current && inlineImage?.announcementId === expanded) {
       setInlineImageLoading(null)
       return
     }
