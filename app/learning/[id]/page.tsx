@@ -43,7 +43,8 @@ function LearningDetailContent({ id }: { id: string }) {
   const [loading, setLoading] = useState(true)
   const [restrictedDialogOpen, setRestrictedDialogOpen] = useState(false)
   const [streamUrl, setStreamUrl] = useState<string | null>(null)
-  const streamRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [streamLoading, setStreamLoading] = useState(false)
+  const streamBlobUrlRef = useRef<string | null>(null)
   const router = useRouter()
 
   if (isBlacklisted) {
@@ -100,33 +101,46 @@ function LearningDetailContent({ id }: { id: string }) {
       .finally(() => setLoading(false))
   }, [id, router])
 
-  // Fetch stream URL when learning has uploaded video (video_stream_url) and user is premium
+  // Fetch stream URL when learning has uploaded video (video_stream_url); if auth_required, fetch with Bearer and use blob URL
   useEffect(() => {
     if (!learning?.video_stream_url) {
+      if (streamBlobUrlRef.current) {
+        URL.revokeObjectURL(streamBlobUrlRef.current)
+        streamBlobUrlRef.current = null
+      }
       setStreamUrl(null)
+      setStreamLoading(false)
       return
     }
     let cancelled = false
-    const fetchStream = () => {
-      api
-        .getLearningVideoStreamUrl(id)
-        .then((res) => {
+    setStreamLoading(true)
+    api
+      .getLearningVideoStreamUrl(id)
+      .then(async (res) => {
+        if (cancelled) return
+        if (res.auth_required) {
+          const blob = await api.fetchStreamBlob(res.url)
           if (cancelled) return
+          if (streamBlobUrlRef.current) URL.revokeObjectURL(streamBlobUrlRef.current)
+          const blobUrl = URL.createObjectURL(blob)
+          streamBlobUrlRef.current = blobUrl
+          setStreamUrl(blobUrl)
+        } else {
           const fullUrl = res.url.startsWith("http") ? res.url : `${API_BASE}${res.url}`
           setStreamUrl(fullUrl)
-          const expiresMs = (res.expires_in_minutes ?? 55) * 60 * 1000
-          streamRefreshTimeoutRef.current = setTimeout(fetchStream, Math.max(expiresMs - 60000, 60000))
-        })
-        .catch(() => {
-          if (!cancelled) setStreamUrl(null)
-        })
-    }
-    fetchStream()
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setStreamUrl(null)
+      })
+      .finally(() => {
+        if (!cancelled) setStreamLoading(false)
+      })
     return () => {
       cancelled = true
-      if (streamRefreshTimeoutRef.current) {
-        clearTimeout(streamRefreshTimeoutRef.current)
-        streamRefreshTimeoutRef.current = null
+      if (streamBlobUrlRef.current) {
+        URL.revokeObjectURL(streamBlobUrlRef.current)
+        streamBlobUrlRef.current = null
       }
     }
   }, [id, learning?.video_stream_url])
@@ -146,7 +160,7 @@ function LearningDetailContent({ id }: { id: string }) {
   const embedUrl = learning.video_url
     ? getYouTubeEmbedUrl(learning.video_url)
     : null
-  const hasUploadedVideo = !!streamUrl
+  const hasUploadedVideo = !!learning.video_stream_url
 
   return (
     <AppShell>
@@ -181,15 +195,21 @@ function LearningDetailContent({ id }: { id: string }) {
         {/* Video player: uploaded stream (premium) or external (YouTube / link) */}
         {hasUploadedVideo ? (
           <Card className="border-border bg-card overflow-hidden">
-            <div className="aspect-video bg-black">
-              <video
-                src={streamUrl!}
-                controls
-                className="w-full h-full"
-                playsInline
-              >
-                Your browser does not support the video tag.
-              </video>
+            <div className="aspect-video bg-black flex items-center justify-center">
+              {streamLoading ? (
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              ) : streamUrl ? (
+                <video
+                  src={streamUrl}
+                  controls
+                  className="w-full h-full"
+                  playsInline
+                >
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                <p className="text-sm text-muted-foreground">Unable to load video. Check your premium access.</p>
+              )}
             </div>
           </Card>
         ) : embedUrl ? (

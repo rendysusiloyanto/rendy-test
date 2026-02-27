@@ -54,7 +54,7 @@ export function AdminUsers() {
   const [filterRole, setFilterRole] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterClass, setFilterClass] = useState<string>("all")
-  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest")
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("oldest")
   const [editingUser, setEditingUser] = useState<UserResponse | null>(null)
   const [editForm, setEditForm] = useState<UserUpdate>({})
   const [editDialogOpen, setEditDialogOpen] = useState(false)

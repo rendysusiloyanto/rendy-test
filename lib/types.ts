@@ -124,7 +124,9 @@ export interface LearningResponse {
 
 export interface LearningVideoStreamUrlResponse {
   url: string
-  expires_in_minutes: number
+  /** When true, frontend must fetch the stream with Authorization header and use blob URL for <video>. */
+  auth_required?: boolean
+  expires_in_minutes?: number
 }
 
 // Announcement types

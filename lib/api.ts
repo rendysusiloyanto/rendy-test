@@ -238,6 +238,20 @@ class ApiClient {
     })
   }
 
+  /** Fetch stream with Bearer token; use when auth_required is true (e.g. premium video). */
+  async fetchStreamBlob(streamPathOrUrl: string): Promise<Blob> {
+    const url = streamPathOrUrl.startsWith("http") ? streamPathOrUrl : `${API_BASE}${streamPathOrUrl}`
+    const token = this.getToken()
+    const res = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => null)
+      throw new ApiError(res.status, body?.detail || res.statusText, body)
+    }
+    return res.blob()
+  }
+
   async deleteLearning(id: string): Promise<void> {
     await this.request(`/api/learning/${id}`, {
       method: "DELETE",
