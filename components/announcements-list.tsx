@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { AnnouncementAttachmentViewer } from "@/components/announcement-attachment-viewer"
-import { Megaphone, Paperclip, Loader2, ChevronRight, BookOpen, Download, ExternalLink } from "lucide-react"
+import { Megaphone, Paperclip, Loader2, ChevronRight, BookOpen, Download } from "lucide-react"
 import { safeFormatDistanceToNow } from "@/lib/utils"
 
 const IMAGE_EXTS = ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"]
@@ -92,15 +92,6 @@ function AnnouncementItem({
                       />
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-border"
-                        onClick={() => window.open(inlineImageBlobUrl, "_blank", "noopener,noreferrer")}
-                      >
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Open in new tab
-                      </Button>
                       <Button variant="outline" size="sm" asChild className="border-border">
                         <a href={inlineImageBlobUrl} download={a.attachment_filename} rel="noopener noreferrer">
                           <Download className="mr-2 h-4 w-4" />

@@ -18,6 +18,7 @@ import {
   GraduationCap,
   Hash,
   FlaskConical,
+  Crown,
 } from "lucide-react"
 
 function DashboardContent() {
@@ -46,6 +47,12 @@ function DashboardContent() {
             <Badge variant="outline" className="font-mono text-xs border-primary/30 text-primary">
               {user?.role}
             </Badge>
+            {user?.is_premium && (
+              <Badge variant="secondary" className="text-xs gap-1 border-amber-500/50 text-amber-600 dark:text-amber-400">
+                <Crown className="h-3 w-3" />
+                PREMIUM
+              </Badge>
+            )}
           </div>
           {user?.class_name && (
             <div className="flex items-center gap-2 rounded-lg bg-secondary px-3 py-2">
