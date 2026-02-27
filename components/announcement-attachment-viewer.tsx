@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Loader2, Download, FileText } from "lucide-react"
+import { Loader2, Download, FileText, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 
 type ViewerProps = {
@@ -164,7 +164,16 @@ export function AnnouncementAttachmentViewer({
                   </p>
                 </div>
               )}
-              <div className="flex justify-end pt-2">
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-border"
+                  onClick={() => window.open(blobUrl, "_blank", "noopener,noreferrer")}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Open in new tab
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
