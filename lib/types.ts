@@ -118,6 +118,8 @@ export interface LearningResponse {
   video_stream_url?: string | null
   is_published: boolean
   is_premium?: boolean
+  /** When true, show "Coming soon" (can be used in addition to or instead of is_published). */
+  coming_soon?: boolean
   created_at: string
   updated_at: string
 }

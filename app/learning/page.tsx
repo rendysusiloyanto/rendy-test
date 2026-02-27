@@ -21,6 +21,8 @@ import {
   Loader2,
   Calendar,
   AlertCircle,
+  Crown,
+  Sparkles,
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 
@@ -145,45 +147,59 @@ function LearningListContent() {
             </Card>
 
             {learnings.length === 0 ? null : learnings.map((item) => {
-              const isComingSoon = !item.is_published
-              const cardContent = (
-                <Card className={`border-border bg-card h-full group transition-colors ${isComingSoon ? "opacity-70 cursor-default" : "hover:bg-accent cursor-pointer"}`}>
-                  <CardContent className="p-0">
-                    {/* Video thumbnail area */}
-                    <div className="relative aspect-video bg-secondary rounded-t-lg flex items-center justify-center overflow-hidden">
-                      {getLearningThumbnailSrc(item) && (
-                        <img
-                          src={getLearningThumbnailSrc(item)!}
-                          alt=""
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-                      )}
-                      {isComingSoon ? (
-                        <>
-                          <div className="absolute inset-0 bg-secondary/80" />
-                          <Badge className="relative text-[10px] font-semibold bg-muted text-muted-foreground border border-border">
-                            Coming Soon
-                          </Badge>
-                        </>
-                      ) : (item.video_url || item.video_id) ? (
-                        <>
-                          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
-                          <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 border border-primary/30 group-hover:bg-primary/30 transition-colors">
-                            <Play className="h-4 w-4 text-primary ml-0.5" />
-                          </div>
-                        </>
-                      ) : !getLearningThumbnailSrc(item) ? (
-                        <BookOpen className="h-8 w-8 text-muted-foreground" />
-                      ) : (
+              const isComingSoon = item.coming_soon === true || !item.is_published
+              const thumbAndTitle = (
+                <>
+                  <div className="relative aspect-video bg-secondary rounded-t-lg flex items-center justify-center overflow-hidden">
+                    {getLearningThumbnailSrc(item) && (
+                      <img
+                        src={getLearningThumbnailSrc(item)!}
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    )}
+                    {isComingSoon ? (
+                      <>
+                        <div className="absolute inset-0 bg-secondary/80" />
+                        <Badge className="relative text-[10px] font-semibold bg-muted text-muted-foreground border border-border">
+                          Coming Soon
+                        </Badge>
+                      </>
+                    ) : (item.video_url || item.video_id) ? (
+                      <>
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
-                      )}
-                    </div>
-
-                    <div className="p-4 space-y-2">
-                      <h3 className="text-sm font-medium text-foreground line-clamp-2 text-balance">
-                        {item.title}
-                      </h3>
-                      <div className="flex items-center gap-2 pt-1">
+                        <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 border border-primary/30 group-hover:bg-primary/30 transition-colors">
+                          <Play className="h-4 w-4 text-primary ml-0.5" />
+                        </div>
+                      </>
+                    ) : !getLearningThumbnailSrc(item) ? (
+                      <BookOpen className="h-8 w-8 text-muted-foreground" />
+                    ) : (
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
+                    )}
+                  </div>
+                  <div className="p-4 pb-2">
+                    <h3 className="text-sm font-medium text-foreground line-clamp-2 text-balance">
+                      {item.title}
+                    </h3>
+                  </div>
+                </>
+              )
+              return (
+                <Card
+                  key={item.id}
+                  className={`border-border bg-card h-full group transition-colors ${isComingSoon ? "opacity-70 cursor-default" : "hover:bg-accent cursor-pointer"}`}
+                >
+                  <CardContent className="p-0">
+                    {isComingSoon ? (
+                      thumbAndTitle
+                    ) : (
+                      <Link href={`/learning/${item.id}`} className="block">
+                        {thumbAndTitle}
+                      </Link>
+                    )}
+                    <div className="px-4 pb-4 space-y-2">
+                      <div className="flex items-center gap-2">
                         <Badge
                           variant="outline"
                           className="text-[10px] font-mono border-border text-muted-foreground"
@@ -202,26 +218,37 @@ function LearningListContent() {
                             Video
                           </Badge>
                         )}
+                        {item.is_premium && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] font-mono border-amber-500/50 text-amber-600 dark:text-amber-400"
+                          >
+                            <Crown className="mr-1 h-2.5 w-2.5" />
+                            Premium
+                          </Badge>
+                        )}
                         {isComingSoon && (
                           <Badge
                             variant="outline"
                             className="text-[10px] font-mono border-muted-foreground/30 text-muted-foreground"
                           >
+                            <Sparkles className="mr-1 h-2.5 w-2.5" />
                             Coming Soon
                           </Badge>
                         )}
                       </div>
+                      {item.is_premium && !isComingSoon && (
+                        <Link
+                          href="/premium"
+                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-600 hover:bg-amber-500/20 dark:text-amber-400"
+                        >
+                          <Crown className="h-3.5 w-3.5" />
+                          Go premium now
+                        </Link>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
-              )
-
-              return isComingSoon ? (
-                <div key={item.id}>{cardContent}</div>
-              ) : (
-                <Link key={item.id} href={`/learning/${item.id}`}>
-                  {cardContent}
-                </Link>
               )
             })}
           </div>

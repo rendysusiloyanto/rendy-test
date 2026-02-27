@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { RestrictedAccessDialog } from "@/components/restricted-access-dialog"
-import { ArrowLeft, Calendar, Loader2, ExternalLink, AlertCircle } from "lucide-react"
+import Link from "next/link"
+import { ArrowLeft, Calendar, Loader2, ExternalLink, AlertCircle, Crown, Sparkles } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ""
@@ -201,6 +202,7 @@ function LearningDetailContent({ id }: { id: string }) {
     ? getYouTubeEmbedUrl(learning.video_url)
     : null
   const hasUploadedVideo = !!learning.video_stream_url
+  const isComingSoon = learning.coming_soon === true || !learning.is_published
 
   return (
     <AppShell>
@@ -219,7 +221,7 @@ function LearningDetailContent({ id }: { id: string }) {
           <h1 className="text-2xl font-bold text-foreground text-balance">
             {learning.title}
           </h1>
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex flex-wrap items-center gap-2 mt-2">
             <Badge
               variant="outline"
               className="text-xs font-mono border-border text-muted-foreground"
@@ -229,7 +231,33 @@ function LearningDetailContent({ id }: { id: string }) {
                 addSuffix: true,
               })}
             </Badge>
+            {learning.is_premium && (
+              <Badge
+                variant="outline"
+                className="text-xs font-mono border-amber-500/50 text-amber-600 dark:text-amber-400"
+              >
+                <Crown className="mr-1 h-3 w-3" />
+                Premium
+              </Badge>
+            )}
+            {isComingSoon && (
+              <Badge
+                variant="outline"
+                className="text-xs font-mono border-muted-foreground/30 text-muted-foreground"
+              >
+                <Sparkles className="mr-1 h-3 w-3" />
+                Coming Soon
+              </Badge>
+            )}
           </div>
+          {learning.is_premium && !isComingSoon && (
+            <Button variant="outline" size="sm" className="mt-3 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10" asChild>
+              <Link href="/premium">
+                <Crown className="mr-2 h-3.5 w-3.5" />
+                Go premium now
+              </Link>
+            </Button>
+          )}
         </div>
 
         {/* Video player: uploaded stream (premium) or external (YouTube / link) */}
