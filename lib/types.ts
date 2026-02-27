@@ -124,8 +124,12 @@ export interface LearningResponse {
 
 export interface LearningVideoStreamUrlResponse {
   url: string
-  /** When true, frontend must fetch the stream with Authorization header and use blob URL for <video>. */
+  /** When true, requests (playlist/segments) must include Authorization: Bearer <token>. */
   auth_required?: boolean
+  /** HLS playlist URL (e.g. /api/videos/stream/{id}/hls/playlist.m3u8). Prefer for chunked/adaptive streaming. */
+  hls_url?: string | null
+  /** DASH manifest URL (e.g. /api/videos/stream/{id}/dash/manifest.mpd). */
+  dash_url?: string | null
   expires_in_minutes?: number
 }
 

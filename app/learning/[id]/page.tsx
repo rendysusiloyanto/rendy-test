@@ -43,8 +43,11 @@ function LearningDetailContent({ id }: { id: string }) {
   const [loading, setLoading] = useState(true)
   const [restrictedDialogOpen, setRestrictedDialogOpen] = useState(false)
   const [streamUrl, setStreamUrl] = useState<string | null>(null)
+  const [hlsStreamUrl, setHlsStreamUrl] = useState<string | null>(null)
   const [streamLoading, setStreamLoading] = useState(false)
   const streamBlobUrlRef = useRef<string | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const hlsRef = useRef<import("hls.js").default | null>(null)
   const router = useRouter()
 
   if (isBlacklisted) {
@@ -101,7 +104,7 @@ function LearningDetailContent({ id }: { id: string }) {
       .finally(() => setLoading(false))
   }, [id, router])
 
-  // Fetch stream URL when learning has uploaded video (video_stream_url); if auth_required, fetch with Bearer and use blob URL
+  // Fetch stream URL; prefer HLS/DASH for chunked streaming, else fallback to raw blob
   useEffect(() => {
     if (!learning?.video_stream_url) {
       if (streamBlobUrlRef.current) {
@@ -109,29 +112,38 @@ function LearningDetailContent({ id }: { id: string }) {
         streamBlobUrlRef.current = null
       }
       setStreamUrl(null)
+      setHlsStreamUrl(null)
       setStreamLoading(false)
       return
     }
     let cancelled = false
     setStreamLoading(true)
+    setHlsStreamUrl(null)
     api
       .getLearningVideoStreamUrl(id)
       .then(async (res) => {
         if (cancelled) return
-        if (res.auth_required) {
+        const fullHls = res.hls_url ? (res.hls_url.startsWith("http") ? res.hls_url : `${API_BASE}${res.hls_url}`) : null
+        if (fullHls) {
+          setStreamUrl(null)
+          setHlsStreamUrl(fullHls)
+        } else if (res.auth_required) {
           const blob = await api.fetchStreamBlob(res.url)
           if (cancelled) return
           if (streamBlobUrlRef.current) URL.revokeObjectURL(streamBlobUrlRef.current)
           const blobUrl = URL.createObjectURL(blob)
           streamBlobUrlRef.current = blobUrl
           setStreamUrl(blobUrl)
+          setHlsStreamUrl(null)
         } else {
           const fullUrl = res.url.startsWith("http") ? res.url : `${API_BASE}${res.url}`
           setStreamUrl(fullUrl)
+          setHlsStreamUrl(null)
         }
       })
       .catch(() => {
         if (!cancelled) setStreamUrl(null)
+        if (!cancelled) setHlsStreamUrl(null)
       })
       .finally(() => {
         if (!cancelled) setStreamLoading(false)
@@ -144,6 +156,34 @@ function LearningDetailContent({ id }: { id: string }) {
       }
     }
   }, [id, learning?.video_stream_url])
+
+  // Attach HLS.js to video when hlsStreamUrl is set (sends Bearer token on playlist/segment requests)
+  useEffect(() => {
+    if (!hlsStreamUrl || !videoRef.current) return
+    const video = videoRef.current
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+    import("hls.js")
+      .then((mod) => {
+        const Hls = mod.default
+        if (!Hls.isSupported()) return
+        const hls = new Hls({
+          xhrSetup(xhr) {
+            if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`)
+          },
+        })
+        hlsRef.current = hls
+        hls.loadSource(hlsStreamUrl)
+        hls.attachMedia(video)
+      })
+      .catch(() => {})
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy()
+        hlsRef.current = null
+      }
+    }
+  }, [hlsStreamUrl])
 
   if (loading) {
     return (
@@ -198,9 +238,10 @@ function LearningDetailContent({ id }: { id: string }) {
             <div className="aspect-video bg-black flex items-center justify-center">
               {streamLoading ? (
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              ) : streamUrl ? (
+              ) : streamUrl || hlsStreamUrl ? (
                 <video
-                  src={streamUrl}
+                  ref={videoRef}
+                  src={streamUrl ?? undefined}
                   controls
                   className="w-full h-full"
                   playsInline
