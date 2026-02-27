@@ -6,6 +6,7 @@ import type { AnnouncementResponse } from "@/lib/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { AnnouncementAttachmentViewer } from "@/components/announcement-attachment-viewer"
 import { Megaphone, Paperclip, Loader2, ChevronRight } from "lucide-react"
 import { safeFormatDistanceToNow } from "@/lib/utils"
 
@@ -13,6 +14,7 @@ export function AnnouncementsList() {
   const [announcements, setAnnouncements] = useState<AnnouncementResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [attachmentViewer, setAttachmentViewer] = useState<{ id: string; filename: string } | null>(null)
 
   useEffect(() => {
     api
@@ -101,17 +103,11 @@ export function AnnouncementsList() {
                   <Button
                     variant="outline"
                     size="sm"
-                    asChild
                     className="border-border text-foreground"
+                    onClick={() => setAttachmentViewer({ id: a.id, filename: a.attachment_filename! })}
                   >
-                    <a
-                      href={api.getAnnouncementAttachmentUrl(a.id)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Paperclip className="mr-1.5 h-3 w-3" />
-                      {a.attachment_filename}
-                    </a>
+                    <Paperclip className="mr-1.5 h-3 w-3" />
+                    View / Download: {a.attachment_filename}
                   </Button>
                 )}
               </div>
@@ -119,6 +115,14 @@ export function AnnouncementsList() {
           </div>
         ))}
       </CardContent>
+      {attachmentViewer && (
+        <AnnouncementAttachmentViewer
+          open={!!attachmentViewer}
+          onOpenChange={(open) => !open && setAttachmentViewer(null)}
+          announcementId={attachmentViewer.id}
+          filename={attachmentViewer.filename}
+        />
+      )}
     </Card>
   )
 }

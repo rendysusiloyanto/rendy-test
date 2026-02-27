@@ -247,7 +247,9 @@ class ApiClient {
 
   // Announcements
   async listAnnouncements(): Promise<AnnouncementResponse[]> {
-    return this.request("/api/announcements")
+    return this.request("/api/announcements", {
+      headers: this.headers(true),
+    })
   }
 
   async adminListAnnouncements(): Promise<AnnouncementResponse[]> {
@@ -289,6 +291,17 @@ class ApiClient {
   getAnnouncementAttachmentUrl(id: string): string {
     const token = this.getToken()
     return `${API_BASE}/api/announcements/${id}/attachment${token ? `?token=${token}` : ""}`
+  }
+
+  /** Fetch announcement attachment with Bearer auth (for viewer or download). */
+  async getAnnouncementAttachmentBlob(id: string): Promise<Blob> {
+    const url = `${API_BASE}/api/announcements/${encodeURIComponent(id)}/attachment`
+    const res = await fetch(url, { headers: this.authHeaders() })
+    if (!res.ok) {
+      const body = await res.json().catch(() => null)
+      throw new ApiError(res.status, body?.detail || res.statusText, body)
+    }
+    return res.blob()
   }
 
   // User Management
