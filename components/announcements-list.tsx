@@ -188,6 +188,7 @@ export function AnnouncementsList() {
           ))
         )}
       </CardContent>
+      </Card>
 
       {attachmentViewer && (
         <AnnouncementAttachmentViewer
