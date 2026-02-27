@@ -1,17 +1,24 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { api } from "@/lib/api"
 import type { AnnouncementResponse } from "@/lib/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { AnnouncementAttachmentViewer } from "@/components/announcement-attachment-viewer"
-import { Megaphone, Paperclip, Loader2, ChevronRight, BookOpen } from "lucide-react"
+import { Megaphone, Paperclip, Loader2, ChevronRight, BookOpen, Download, ExternalLink } from "lucide-react"
 import { safeFormatDistanceToNow } from "@/lib/utils"
 
+const IMAGE_EXTS = ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"]
+
+function isImageFilename(filename: string): boolean {
+  const ext = filename.split(".").pop()?.toLowerCase()
+  return !!ext && IMAGE_EXTS.includes(ext)
+}
+
 /** Titles containing these keywords (case-insensitive) are shown in the "Prediksi Soal UKK" card. */
-const FEATURED_KEYWORDS = ["ukk", "prediksi"]
+const FEATURED_KEYWORDS = ["Prediksi Soal UKK"]
 
 function isFeaturedAnnouncement(a: AnnouncementResponse): boolean {
   const t = a.title.toLowerCase()
@@ -23,12 +30,18 @@ function AnnouncementItem({
   expanded,
   onToggle,
   onOpenAttachment,
+  inlineImageBlobUrl,
+  inlineImageLoading,
 }: {
   a: AnnouncementResponse
   expanded: boolean
   onToggle: () => void
   onOpenAttachment: (id: string, filename: string) => void
+  inlineImageBlobUrl: string | null
+  inlineImageLoading: boolean
 }) {
+  const isImage = a.has_attachment && a.attachment_filename && isImageFilename(a.attachment_filename)
+
   return (
     <div className="rounded-lg border border-border bg-secondary/50 p-3 transition-colors hover:bg-secondary">
       <button
@@ -62,15 +75,53 @@ function AnnouncementItem({
             </p>
           )}
           {a.has_attachment && a.attachment_filename && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-border text-foreground"
-              onClick={() => onOpenAttachment(a.id, a.attachment_filename!)}
-            >
-              <Paperclip className="mr-1.5 h-3 w-3" />
-              View / Download: {a.attachment_filename}
-            </Button>
+            isImage ? (
+              <div className="space-y-2">
+                {inlineImageLoading && (
+                  <div className="flex items-center justify-center py-8 rounded-lg border border-border bg-muted/30">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                )}
+                {inlineImageBlobUrl && !inlineImageLoading && (
+                  <>
+                    <div className="rounded-lg border border-border bg-muted/30 overflow-hidden">
+                      <img
+                        src={inlineImageBlobUrl}
+                        alt={a.attachment_filename}
+                        className="w-full max-h-[70vh] object-contain"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-border"
+                        onClick={() => window.open(inlineImageBlobUrl, "_blank", "noopener,noreferrer")}
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Open in new tab
+                      </Button>
+                      <Button variant="outline" size="sm" asChild className="border-border">
+                        <a href={inlineImageBlobUrl} download={a.attachment_filename} rel="noopener noreferrer">
+                          <Download className="mr-2 h-4 w-4" />
+                          Download
+                        </a>
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-border text-foreground"
+                onClick={() => onOpenAttachment(a.id, a.attachment_filename!)}
+              >
+                <Paperclip className="mr-1.5 h-3 w-3" />
+                View / Download: {a.attachment_filename}
+              </Button>
+            )
           )}
         </div>
       )}
@@ -83,6 +134,9 @@ export function AnnouncementsList() {
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [attachmentViewer, setAttachmentViewer] = useState<{ id: string; filename: string } | null>(null)
+  const [inlineImage, setInlineImage] = useState<{ announcementId: string; blobUrl: string } | null>(null)
+  const [inlineImageLoading, setInlineImageLoading] = useState<string | null>(null)
+  const inlineImageUrlRef = useRef<string | null>(null)
 
   const { featured, rest } = useMemo(() => {
     const featured: AnnouncementResponse[] = []
@@ -101,6 +155,48 @@ export function AnnouncementsList() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  // Fetch image blob when expanding an announcement with image attachment
+  useEffect(() => {
+    if (!expanded) {
+      if (inlineImageUrlRef.current) {
+        URL.revokeObjectURL(inlineImageUrlRef.current)
+        inlineImageUrlRef.current = null
+      }
+      setInlineImage(null)
+      setInlineImageLoading(null)
+      return
+    }
+    const announcement = announcements.find((a) => a.id === expanded)
+    if (!announcement?.has_attachment || !announcement.attachment_filename || !isImageFilename(announcement.attachment_filename)) {
+      if (inlineImageUrlRef.current) {
+        URL.revokeObjectURL(inlineImageUrlRef.current)
+        inlineImageUrlRef.current = null
+      }
+      setInlineImage(null)
+      setInlineImageLoading(null)
+      return
+    }
+    if (inlineImage?.announcementId === expanded) {
+      setInlineImageLoading(null)
+      return
+    }
+    if (inlineImageUrlRef.current) {
+      URL.revokeObjectURL(inlineImageUrlRef.current)
+      inlineImageUrlRef.current = null
+    }
+    setInlineImage(null)
+    setInlineImageLoading(expanded)
+    api
+      .getAnnouncementAttachmentBlob(expanded)
+      .then((blob) => {
+        const url = URL.createObjectURL(blob)
+        inlineImageUrlRef.current = url
+        setInlineImage({ announcementId: expanded, blobUrl: url })
+      })
+      .catch(() => {})
+      .finally(() => setInlineImageLoading((prev) => (prev === expanded ? null : prev)))
+  }, [expanded, announcements])
 
   const openAttachment = (id: string, filename: string) => {
     setAttachmentViewer({ id, filename })
@@ -155,6 +251,8 @@ export function AnnouncementsList() {
                 expanded={expanded === a.id}
                 onToggle={() => setExpanded(expanded === a.id ? null : a.id)}
                 onOpenAttachment={openAttachment}
+                inlineImageBlobUrl={inlineImage?.announcementId === a.id ? inlineImage.blobUrl : null}
+                inlineImageLoading={inlineImageLoading === a.id}
               />
             ))}
           </CardContent>
@@ -184,6 +282,8 @@ export function AnnouncementsList() {
               expanded={expanded === a.id}
               onToggle={() => setExpanded(expanded === a.id ? null : a.id)}
               onOpenAttachment={openAttachment}
+              inlineImageBlobUrl={inlineImage?.announcementId === a.id ? inlineImage.blobUrl : null}
+              inlineImageLoading={inlineImageLoading === a.id}
             />
           ))
         )}
