@@ -40,7 +40,7 @@ const STATIC_VIDEO = {
 }
 
 function LearningListContent() {
-  const { isBlacklisted } = useAuth()
+  const { isBlacklisted, isPremium } = useAuth()
   const [learnings, setLearnings] = useState<LearningResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [restrictedDialogOpen, setRestrictedDialogOpen] = useState(false)
@@ -237,7 +237,7 @@ function LearningListContent() {
                           </Badge>
                         )}
                       </div>
-                      {item.is_premium && !isComingSoon && (
+                      {item.is_premium && !isComingSoon && !isPremium && (
                         <Link
                           href="/premium"
                           className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-600 hover:bg-amber-500/20 dark:text-amber-400"

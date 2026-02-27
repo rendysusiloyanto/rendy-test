@@ -39,7 +39,7 @@ function getYouTubeEmbedUrl(url: string): string | null {
 }
 
 function LearningDetailContent({ id }: { id: string }) {
-  const { isBlacklisted } = useAuth()
+  const { isBlacklisted, isPremium } = useAuth()
   const [learning, setLearning] = useState<LearningResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [restrictedDialogOpen, setRestrictedDialogOpen] = useState(false)
@@ -250,7 +250,7 @@ function LearningDetailContent({ id }: { id: string }) {
               </Badge>
             )}
           </div>
-          {learning.is_premium && !isComingSoon && (
+          {learning.is_premium && !isComingSoon && !isPremium && (
             <Button variant="outline" size="sm" className="mt-3 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10" asChild>
               <Link href="/premium">
                 <Crown className="mr-2 h-3.5 w-3.5" />
