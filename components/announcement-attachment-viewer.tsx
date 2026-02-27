@@ -36,6 +36,8 @@ export function AnnouncementAttachmentViewer({
   const ext = filename ? filename.split(".").pop()?.toLowerCase() : ""
   const isPdf = ext === "pdf"
   const isDocx = ext === "docx" || ext === "doc"
+  const imageExts = ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"]
+  const isImage = !!ext && imageExts.includes(ext)
 
   // Fetch attachment and create blob URL
   useEffect(() => {
@@ -75,7 +77,7 @@ export function AnnouncementAttachmentViewer({
       }
       blobRef.current = null
     }
-  }, [open, announcementId, isPdf, isDocx])
+  }, [open, announcementId, isPdf, isDocx, isImage])
 
   // Render DOCX after container is in the DOM (blobUrl set → re-render → container mounted)
   useEffect(() => {
@@ -156,7 +158,16 @@ export function AnnouncementAttachmentViewer({
                   style={{ color: "#000" }}
                 />
               )}
-              {!isPdf && !isDocx && (
+              {isImage && (
+                <div className="flex justify-center rounded-lg border border-border bg-muted/30 p-4 min-h-[200px]">
+                  <img
+                    src={blobUrl}
+                    alt={filename}
+                    className="max-w-full max-h-[70vh] w-auto h-auto object-contain"
+                  />
+                </div>
+              )}
+              {!isPdf && !isDocx && !isImage && (
                 <div className="py-8 text-center space-y-3">
                   <FileText className="h-12 w-12 mx-auto text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
