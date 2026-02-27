@@ -85,6 +85,7 @@ export function AdminUsers() {
       attendance_number: user.attendance_number,
       role: user.role,
       is_premium: user.is_premium,
+      is_blacklisted: user.is_blacklisted,
     })
     setEditDialogOpen(true)
   }
@@ -94,7 +95,8 @@ export function AdminUsers() {
 
     setSaving(true)
     try {
-      const updated = await api.updateUser(editingUser.id, editForm)
+      const payload: UserUpdate = { ...editForm, is_blacklisted: editForm.is_blacklisted ?? false }
+      const updated = await api.updateUser(editingUser.id, payload)
       setUsers(users.map((u) => (u.id === updated.id ? updated : u)))
       toast.success("User updated successfully")
       setEditDialogOpen(false)
