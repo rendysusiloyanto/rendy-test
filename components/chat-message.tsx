@@ -30,7 +30,7 @@ const markdownComponents = {
     }
     return (
       <code
-        className="rounded bg-zinc-800/90 text-zinc-200 px-1.5 py-0.5 text-[13px] border border-zinc-700/50 break-all font-mono [font-family:ui-monospace,monospace]"
+        className="rounded bg-muted/80 text-foreground/90 px-1.5 py-0.5 text-[13px] break-all font-mono [font-family:ui-monospace,monospace]"
         {...props}
       >
         {children}
@@ -38,32 +38,32 @@ const markdownComponents = {
     )
   },
   pre: ({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) => (
-    <pre className="my-3 rounded-lg overflow-hidden" {...props}>
+    <pre className="my-4 rounded-lg overflow-hidden" {...props}>
       {children}
     </pre>
   ),
   p: ({ children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => (
-    <p className="my-2.5 leading-relaxed break-words" {...props}>
+    <p className="my-3 leading-7 text-foreground/90 break-words first:mt-0 last:mb-0" {...props}>
       {children}
     </p>
   ),
   ul: ({ children, ...props }: React.HTMLAttributes<HTMLUListElement>) => (
-    <ul className="my-2.5 pl-5 list-disc space-y-1.5 leading-relaxed [&>li]:block" {...props}>
+    <ul className="my-3 pl-5 list-disc space-y-2 text-foreground/90 [&>li]:block first:mt-0 last:mb-0" {...props}>
       {children}
     </ul>
   ),
   ol: ({ children, ...props }: React.HTMLAttributes<HTMLOListElement>) => (
-    <ol className="my-2.5 pl-6 list-decimal space-y-1.5 leading-relaxed [&>li]:block" {...props}>
+    <ol className="my-3 pl-6 list-decimal space-y-2 text-foreground/90 [&>li]:block first:mt-0 last:mb-0" {...props}>
       {children}
     </ol>
   ),
   li: ({ children, ...props }: React.HTMLAttributes<HTMLLIElement>) => (
-    <li className="pl-0.5 my-0.5 break-words" {...props}>
+    <li className="pl-1 my-0.5 leading-7 break-words" {...props}>
       {children}
     </li>
   ),
   strong: ({ children, ...props }: React.HTMLAttributes<HTMLElement>) => (
-    <strong className="font-semibold" {...props}>
+    <strong className="font-semibold text-foreground" {...props}>
       {children}
     </strong>
   ),
@@ -73,17 +73,17 @@ const markdownComponents = {
     </em>
   ),
   h1: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h1 className="text-lg font-semibold mt-4 mb-2 first:mt-0" {...props}>
+    <h1 className="text-lg font-semibold mt-5 mb-2 text-foreground first:mt-0" {...props}>
       {children}
     </h1>
   ),
   h2: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h2 className="text-base font-semibold mt-3 mb-1.5" {...props}>
+    <h2 className="text-base font-semibold mt-4 mb-2 text-foreground" {...props}>
       {children}
     </h2>
   ),
   h3: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h3 className="text-sm font-semibold mt-2.5 mb-1" {...props}>
+    <h3 className="text-sm font-semibold mt-3 mb-1.5 text-foreground" {...props}>
       {children}
     </h3>
   ),
@@ -143,16 +143,16 @@ export function ChatMessage({ role, content, timestamp, isStreaming }: ChatMessa
       </Avatar>
       <div className={`flex flex-col min-w-0 ${isUser ? "items-end" : "items-start"} max-w-[85%]`}>
         <div
-          className={`rounded-2xl px-5 py-3 shadow-sm break-words ${
+          className={`rounded-2xl px-5 py-4 shadow-sm break-words ${
             isUser
               ? "bg-primary text-primary-foreground rounded-br-md"
-              : "bg-card text-foreground border border-border rounded-bl-md shadow-sm"
+              : "bg-card/95 text-foreground border border-border/50 rounded-bl-md shadow-sm"
           }`}
         >
           {isUser ? (
-            <p className="text-sm whitespace-pre-wrap leading-relaxed">{content}</p>
+            <p className="text-sm whitespace-pre-wrap leading-7">{content}</p>
           ) : (
-            <div className="text-sm prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap prose-headings:font-semibold prose-headings:break-words prose-p:break-words prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-code:font-mono prose-code:before:content-none prose-code:after:content-none">
+            <div className="text-[15px] leading-7 prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap prose-headings:font-semibold prose-headings:break-words prose-p:break-words prose-code:font-mono prose-code:before:content-none prose-code:after:content-none [&>p]:my-3 [&>ul]:my-3 [&>ol]:my-3">
               <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
                 {normalizeMarkdown(content)}
               </ReactMarkdown>
