@@ -38,18 +38,18 @@ const markdownComponents = {
     )
   },
   pre: ({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) => (
-    <pre className="my-4 rounded-lg overflow-hidden" {...props}>
+    <pre className="my-2 rounded-lg overflow-hidden" {...props}>
       {children}
     </pre>
   ),
   p: ({ children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => (
-    <p className="my-3 leading-7 text-foreground/90 break-words first:mt-0 last:mb-0" {...props}>
+    <p className="my-1.5 leading-6 text-foreground/90 break-words first:mt-0 last:mb-0" {...props}>
       {children}
     </p>
   ),
   ul: ({ children, ...props }: React.HTMLAttributes<HTMLUListElement>) => (
     <ul
-      className="my-3 pl-6 space-y-2 text-foreground/90 first:mt-0 last:mb-0 list-none [&>li]:relative [&>li]:pl-3 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:content-['•'] [&>li]:before:text-foreground/70 [&>li]:before:font-normal"
+      className="my-1.5 pl-6 space-y-0.5 text-foreground/90 first:mt-0 last:mb-0 list-none [&>li]:relative [&>li]:pl-3 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:content-['•'] [&>li]:before:text-foreground/70 [&>li]:before:font-normal"
       {...props}
     >
       {children}
@@ -57,7 +57,7 @@ const markdownComponents = {
   ),
   ol: ({ children, ...props }: React.HTMLAttributes<HTMLOListElement>) => (
     <ol
-      className="my-3 pl-6 list-decimal space-y-2 text-foreground/90 first:mt-0 last:mb-0 [counter-reset:list] [&>li]:list-item [&>li]:pl-1"
+      className="my-1.5 pl-6 list-decimal space-y-0.5 text-foreground/90 first:mt-0 last:mb-0 [counter-reset:list] [&>li]:list-item [&>li]:pl-1"
       style={{ listStyleType: "decimal" }}
       {...props}
     >
@@ -65,7 +65,7 @@ const markdownComponents = {
     </ol>
   ),
   li: ({ children, ...props }: React.HTMLAttributes<HTMLLIElement>) => (
-    <li className="my-0.5 leading-7 break-words block" {...props}>
+    <li className="leading-6 break-words block" {...props}>
       {children}
     </li>
   ),
@@ -80,17 +80,17 @@ const markdownComponents = {
     </em>
   ),
   h1: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h1 className="text-lg font-semibold mt-5 mb-2 text-foreground first:mt-0" {...props}>
+    <h1 className="text-lg font-semibold mt-3 mb-1 text-foreground first:mt-0" {...props}>
       {children}
     </h1>
   ),
   h2: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h2 className="text-base font-semibold mt-4 mb-2 text-foreground" {...props}>
+    <h2 className="text-base font-semibold mt-2.5 mb-1 text-foreground" {...props}>
       {children}
     </h2>
   ),
   h3: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h3 className="text-sm font-semibold mt-3 mb-1.5 text-foreground" {...props}>
+    <h3 className="text-sm font-semibold mt-2 mb-1 text-foreground" {...props}>
       {children}
     </h3>
   ),
@@ -157,9 +157,9 @@ export function ChatMessage({ role, content, timestamp, isStreaming }: ChatMessa
           }`}
         >
           {isUser ? (
-            <p className="text-sm whitespace-pre-wrap leading-7">{content}</p>
+            <p className="text-sm whitespace-pre-wrap leading-6">{content}</p>
           ) : (
-            <div className="text-[15px] leading-7 prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap prose-headings:font-semibold prose-headings:break-words prose-p:break-words prose-code:font-mono prose-code:before:content-none prose-code:after:content-none [&>p]:my-3 [&>ul]:my-3 [&>ol]:my-3">
+            <div className="text-[15px] leading-6 prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap prose-headings:font-semibold prose-headings:break-words prose-p:break-words prose-code:font-mono prose-code:before:content-none prose-code:after:content-none [&>p]:my-1.5 [&>ul]:my-1.5 [&>ol]:my-1.5">
               <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
                 {normalizeMarkdown(content)}
               </ReactMarkdown>
