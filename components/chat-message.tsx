@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Bot, User } from "lucide-react"
+import { normalizeMarkdown } from "@/lib/markdown"
 
 interface ChatMessageProps {
   role: "user" | "assistant"
@@ -148,7 +149,7 @@ export function ChatMessage({ role, content, timestamp, isStreaming }: ChatMessa
           ) : (
             <div className="text-sm prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap prose-headings:font-semibold prose-headings:break-words prose-p:break-words prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5">
               <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
-                {content}
+                {normalizeMarkdown(content)}
               </ReactMarkdown>
             </div>
           )}
