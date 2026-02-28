@@ -168,6 +168,17 @@ export interface TestResult {
   message?: string
 }
 
+/** Exam result (e.g. from GET /api/exam-results/:id) for AI analyze */
+export interface ExamResultResponse {
+  id: string
+  passed: boolean
+  score?: number
+  max_score?: number
+  details?: string | null
+  created_at?: string
+  [key: string]: unknown
+}
+
 // VPN WebSocket traffic
 export interface VPNTrafficWs {
   bytes_received: number | null // Total upload

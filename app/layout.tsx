@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "sonner"
 import { AuthProvider } from "@/lib/auth-context"
+import { QueryProvider } from "@/components/providers/query-provider"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -32,7 +33,9 @@ export default function RootLayout({
     <html lang="id">
       <body className="font-sans antialiased">
         <AuthProvider>
-          {children}
+          <QueryProvider>
+            {children}
+          </QueryProvider>
           <Toaster
             position="top-right"
             toastOptions={{

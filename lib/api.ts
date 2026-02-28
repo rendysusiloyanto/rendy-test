@@ -17,6 +17,7 @@ import type {
   PremiumRequestListItem,
   PremiumRequestReview,
   MyPremiumRequestResponse,
+  ExamResultResponse,
 } from "./types"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ""
@@ -145,6 +146,17 @@ class ApiClient {
   // Leaderboard
   async getLeaderboard(): Promise<LeaderboardEntry[]> {
     return this.request("/api/ukk/leaderboard")
+  }
+
+  // Exam result (for AI analyze)
+  async getExamResult(id: string): Promise<ExamResultResponse> {
+    return this.request(`/api/exam-results/${id}`, { headers: this.headers(true) })
+  }
+
+  async getExamResultOptional(id: string): Promise<ExamResultResponse | null> {
+    return this.requestOptional<ExamResultResponse>(`/api/exam-results/${id}`, {
+      headers: this.headers(true),
+    })
   }
 
   // Learning
