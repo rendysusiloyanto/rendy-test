@@ -21,6 +21,18 @@ export interface AiChatResponse {
   remaining_today: number
 }
 
+/** GET /api/ai/chat/history - one conversation per user, backend-managed */
+export interface AiChatHistoryMessage {
+  id: number
+  role: "user" | "assistant"
+  content: string
+  created_at: string
+}
+
+export interface AiChatHistoryResponse {
+  messages: AiChatHistoryMessage[]
+}
+
 /** Error body when limit exceeded or forbidden */
 export interface AiErrorBody {
   detail?: string | { message?: string; remaining_today?: number }

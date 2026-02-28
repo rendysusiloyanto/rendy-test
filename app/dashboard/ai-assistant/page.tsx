@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { AppShell } from "@/components/app-shell"
 import { AuthGuard } from "@/components/auth-guard"
 import { PremiumGuard } from "@/components/premium-guard"
@@ -9,12 +10,15 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useAiChatWithImage } from "@/hooks/use-ai-chat"
 import { useAiChatStream } from "@/hooks/use-ai-chat-stream"
 import { ChatMessage } from "@/components/chat-message"
-import { AI_IMAGE_ACCEPT, AI_IMAGE_MAX_BYTES } from "@/lib/ai-types"
-import { Send, Loader2, ImagePlus, X, Bot, Wrench, Globe, BookOpen, FileCode, ArrowDown } from "lucide-react"
+import { aiApi } from "@/lib/ai-api"
+import { AI_IMAGE_ACCEPT, AI_IMAGE_MAX_BYTES, type AiChatHistoryMessage } from "@/lib/ai-types"
+import { Send, Loader2, ImagePlus, X, Bot, Wrench, Globe, BookOpen, FileCode, ArrowDown, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
+import { ApiError } from "@/lib/api"
 
-type Message = { role: "user" | "assistant"; content: string; createdAt?: Date }
+/** Message shape matches backend history; id optional for optimistic (streaming) messages */
+type Message = Omit<AiChatHistoryMessage, "id"> & { id?: number }
 
 const SUGGESTIONS = [
   { label: "Help me debug Nginx", icon: Wrench },
@@ -25,17 +29,20 @@ const SUGGESTIONS = [
 
 const SCROLL_THRESHOLD = 80
 
-function formatMessageTime(d: Date) {
-  return formatDistanceToNow(d, { addSuffix: true })
+function formatMessageTime(createdAt: string) {
+  return formatDistanceToNow(new Date(createdAt), { addSuffix: true })
 }
 
 function AiAssistantContent() {
+  const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([])
   const [streamingContent, setStreamingContent] = useState("")
   const [input, setInput] = useState("")
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [remainingToday, setRemainingToday] = useState<number | null>(null)
   const [showScrollBottom, setShowScrollBottom] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(true)
+  const [historyError, setHistoryError] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -44,6 +51,51 @@ function AiAssistantContent() {
   const chatStream = useAiChatStream()
   const chatWithImage = useAiChatWithImage()
   const isPending = chatStream.isStreaming || chatWithImage.isPending
+
+  // Load history on mount; replace state entirely (no conversation_id – backend owns one conversation per user)
+  useEffect(() => {
+    let cancelled = false
+    setHistoryError(false)
+    setHistoryLoading(true)
+    aiApi
+      .getChatHistory()
+      .then((res) => {
+        if (!cancelled) setMessages(res.messages)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        if (err instanceof ApiError && err.status === 401) {
+          router.push("/login")
+          return
+        }
+        setHistoryError(true)
+        setMessages([])
+        toast.error("Failed to load chat history")
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [router])
+
+  const fetchHistoryRetry = useCallback(() => {
+    setHistoryError(false)
+    setHistoryLoading(true)
+    aiApi
+      .getChatHistory()
+      .then((res) => setMessages(res.messages))
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) {
+          router.push("/login")
+          return
+        }
+        setHistoryError(true)
+        toast.error("Failed to load chat history")
+      })
+      .finally(() => setHistoryLoading(false))
+  }, [router])
 
   const scrollToBottom = useCallback(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })
@@ -74,13 +126,13 @@ function AiAssistantContent() {
 
   const handleSend = () => {
     const text = input.trim()
+    const nowIso = new Date().toISOString()
     if (imageFile) {
       if (imageFile.size > AI_IMAGE_MAX_BYTES) {
         toast.error("Image must be under 10MB")
         return
       }
-      const now = new Date()
-      setMessages((prev) => [...prev, { role: "user", content: text || "[Image]", createdAt: now }])
+      setMessages((prev) => [...prev, { role: "user", content: text || "[Image]", created_at: nowIso }])
       setInput("")
       setImageFile(null)
       chatWithImage.mutate(
@@ -89,7 +141,7 @@ function AiAssistantContent() {
           onSuccess: (data) => {
             setMessages((prev) => [
               ...prev,
-              { role: "assistant", content: data.reply, createdAt: new Date() },
+              { role: "assistant", content: data.reply, created_at: new Date().toISOString() },
             ])
             setRemainingToday(data.remaining_today)
           },
@@ -98,12 +150,11 @@ function AiAssistantContent() {
       return
     }
     if (!text) return
-    const now = new Date()
-    setMessages((prev) => [...prev, { role: "user", content: text, createdAt: now }])
+    setMessages((prev) => [...prev, { role: "user", content: text, created_at: nowIso }])
     setInput("")
     streamingContentRef.current = ""
     setStreamingContent("")
-    setMessages((prev) => [...prev, { role: "assistant", content: "", createdAt: new Date() }])
+    setMessages((prev) => [...prev, { role: "assistant", content: "", created_at: new Date().toISOString() }])
     chatStream.startStream(text, {
       onDelta: (delta) => {
         streamingContentRef.current += delta
@@ -181,12 +232,27 @@ function AiAssistantContent() {
               ref={scrollRef}
               className="chat-scroll-area flex-1 overflow-y-auto px-4 py-6 space-y-6"
             >
-              {messages.length === 0 && (
+              {historyLoading && (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+                  <p className="text-sm text-muted-foreground">Loading conversation...</p>
+                </div>
+              )}
+              {historyError && !historyLoading && (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <p className="text-sm text-muted-foreground mb-3">Could not load chat history.</p>
+                  <Button variant="outline" size="sm" onClick={fetchHistoryRetry} className="gap-2">
+                    <RefreshCw className="h-4 w-4" />
+                    Retry
+                  </Button>
+                </div>
+              )}
+              {!historyLoading && !historyError && messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/80 border border-border shadow-sm mb-4">
                     <Bot className="h-7 w-7 text-muted-foreground" />
                   </div>
-                  <p className="text-sm text-muted-foreground mb-1">How can I help you today?</p>
+                  <p className="text-sm text-muted-foreground mb-1">Start a conversation</p>
                   <p className="text-xs text-muted-foreground/80 mb-6">Choose a suggestion or type your message</p>
                   <div className="flex flex-wrap justify-center gap-2 max-w-md">
                     {SUGGESTIONS.map((s) => (
@@ -205,20 +271,21 @@ function AiAssistantContent() {
                   </div>
                 </div>
               )}
-              {messages.map((m, i) => {
-                const isLastAssistantStreaming =
-                  isPending && i === messages.length - 1 && m.role === "assistant"
-                const content = isLastAssistantStreaming ? streamingContent : m.content
-                return (
-                  <ChatMessage
-                    key={i}
-                    role={m.role}
-                    content={content}
-                    timestamp={m.createdAt ? formatMessageTime(m.createdAt) : undefined}
-                    isStreaming={isLastAssistantStreaming}
-                  />
-                )
-              })}
+              {!historyLoading &&
+                messages.map((m, i) => {
+                  const isLastAssistantStreaming =
+                    isPending && i === messages.length - 1 && m.role === "assistant"
+                  const content = isLastAssistantStreaming ? streamingContent : m.content
+                  return (
+                    <ChatMessage
+                      key={m.id ?? `msg-${i}`}
+                      role={m.role}
+                      content={content}
+                      timestamp={formatMessageTime(m.created_at)}
+                      isStreaming={isLastAssistantStreaming}
+                    />
+                  )
+                })}
               {isPending && messages[messages.length - 1]?.role !== "assistant" && (
                 <div className="flex w-full gap-3 max-w-3xl mx-auto chat-message-in">
                   <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 border-background bg-muted shadow-sm">
@@ -282,7 +349,7 @@ function AiAssistantContent() {
                   size="icon"
                   className="flex-shrink-0 border-border h-9 w-9 rounded-xl shadow-sm"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isPending}
+                  disabled={isPending || historyLoading}
                 >
                   <ImagePlus className="h-4 w-4" />
                 </Button>
@@ -294,12 +361,12 @@ function AiAssistantContent() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  disabled={isPending}
+                  disabled={isPending || historyLoading}
                 />
                 <Button
                   type="button"
                   onClick={handleSend}
-                  disabled={isPending || (!input.trim() && !imageFile)}
+                  disabled={isPending || historyLoading || (!input.trim() && !imageFile)}
                   size="icon"
                   className="flex-shrink-0 h-9 w-9 rounded-xl shadow-sm"
                 >

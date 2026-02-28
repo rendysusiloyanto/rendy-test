@@ -1,7 +1,7 @@
 "use client"
 
 import { axiosClient } from "./axios-client"
-import type { AiAnalyzeResponse, AiChatRequest, AiChatResponse } from "./ai-types"
+import type { AiAnalyzeResponse, AiChatRequest, AiChatResponse, AiChatHistoryResponse } from "./ai-types"
 import { ApiError } from "./api"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ""
@@ -23,6 +23,12 @@ export const aiApi = {
   /** POST /api/ai/chat */
   async chat(payload: AiChatRequest): Promise<AiChatResponse> {
     const { data } = await axiosClient.post<AiChatResponse>("/api/ai/chat", payload)
+    return data
+  },
+
+  /** GET /api/ai/chat/history - load persistent conversation (one per user). 401 handled by axios interceptor. */
+  async getChatHistory(): Promise<AiChatHistoryResponse> {
+    const { data } = await axiosClient.get<AiChatHistoryResponse>("/api/ai/chat/history")
     return data
   },
 
