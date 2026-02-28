@@ -17,6 +17,11 @@ export function normalizeMarkdown(text: string): string {
   // Blank line before list when bullet follows colon (e.g. "intro:\n- Item" or "intro: - Item")
   out = out.replace(/:\s*\n?\s*-/g, ":\n\n-")
   out = out.replace(/:\s*\*/g, ":\n\n*")
+  // After ) or . ensure newline before next list item (fixes "...DNSMasq)- DNS propagation" merging)
+  out = out.replace(/\)\s*(-\s)/g, ")\n\n- ")
+  out = out.replace(/\)\s*(\*\s)/g, ")\n\n* ")
+  out = out.replace(/\.\s*(-\s)/g, ".\n\n- ")
+  out = out.replace(/\.\s*(\*\s)/g, ".\n\n* ")
   // One bullet per line: put "-" and "*" list markers on their own line
   out = out.replace(/\s+-\s+/g, "\n- ")
   out = out.replace(/\s+\*\s+/g, "\n* ")

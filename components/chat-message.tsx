@@ -30,7 +30,7 @@ const markdownComponents = {
     }
     return (
       <code
-        className="rounded bg-zinc-800/90 text-zinc-200 px-1.5 py-0.5 text-[13px] font-mono border border-zinc-700/50 break-all"
+        className="rounded bg-zinc-800/90 text-zinc-200 px-1.5 py-0.5 text-[13px] border border-zinc-700/50 break-all font-mono [font-family:ui-monospace,monospace]"
         {...props}
       >
         {children}
@@ -48,14 +48,19 @@ const markdownComponents = {
     </p>
   ),
   ul: ({ children, ...props }: React.HTMLAttributes<HTMLUListElement>) => (
-    <ul className="my-2.5 pl-5 list-disc space-y-1 leading-relaxed" {...props}>
+    <ul className="my-2.5 pl-5 list-disc space-y-1.5 leading-relaxed [&>li]:block" {...props}>
       {children}
     </ul>
   ),
   ol: ({ children, ...props }: React.HTMLAttributes<HTMLOListElement>) => (
-    <ol className="my-2.5 pl-6 list-decimal space-y-1 leading-relaxed" {...props}>
+    <ol className="my-2.5 pl-6 list-decimal space-y-1.5 leading-relaxed [&>li]:block" {...props}>
       {children}
     </ol>
+  ),
+  li: ({ children, ...props }: React.HTMLAttributes<HTMLLIElement>) => (
+    <li className="pl-0.5 my-0.5 break-words" {...props}>
+      {children}
+    </li>
   ),
   strong: ({ children, ...props }: React.HTMLAttributes<HTMLElement>) => (
     <strong className="font-semibold" {...props}>
@@ -147,7 +152,7 @@ export function ChatMessage({ role, content, timestamp, isStreaming }: ChatMessa
           {isUser ? (
             <p className="text-sm whitespace-pre-wrap leading-relaxed">{content}</p>
           ) : (
-            <div className="text-sm prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap prose-headings:font-semibold prose-headings:break-words prose-p:break-words prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5">
+            <div className="text-sm prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap prose-headings:font-semibold prose-headings:break-words prose-p:break-words prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-code:font-mono prose-code:before:content-none prose-code:after:content-none">
               <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
                 {normalizeMarkdown(content)}
               </ReactMarkdown>
