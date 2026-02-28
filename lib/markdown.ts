@@ -14,15 +14,10 @@
 export function normalizeMarkdown(text: string): string {
   if (!text?.trim()) return text
   let out = text
-  // Blank line before list when bullet follows colon (e.g. "intro:\n- Item" or "intro: - Item")
+  // Blank line before list when bullet follows colon (e.g. "Here's how it works: * You" → "works:\n\n* You")
   out = out.replace(/:\s*\n?\s*-/g, ":\n\n-")
   out = out.replace(/:\s*\*/g, ":\n\n*")
-  // After ) or . ensure newline before next list item (fixes "...DNSMasq)- DNS propagation" merging)
-  out = out.replace(/\)\s*(-\s)/g, ")\n\n- ")
-  out = out.replace(/\)\s*(\*\s)/g, ")\n\n* ")
-  out = out.replace(/\.\s*(-\s)/g, ".\n\n- ")
-  out = out.replace(/\.\s*(\*\s)/g, ".\n\n* ")
-  // One bullet per line: put "-" and "*" list markers on their own line
+  // One bullet per line: " * " in the middle of text → newline before "* " (handles streamed "browser. * Your")
   out = out.replace(/\s+-\s+/g, "\n- ")
   out = out.replace(/\s+\*\s+/g, "\n* ")
   return out
