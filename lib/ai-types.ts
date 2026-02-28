@@ -27,5 +27,21 @@ export interface AiErrorBody {
   remaining_today?: number
 }
 
+/** SSE stream event: delta chunk */
+export interface AiStreamDelta {
+  delta?: string
+}
+
+/** SSE stream event: done */
+export interface AiStreamDone {
+  done: true
+  remaining_today: number
+}
+
+/** SSE stream event: error */
+export interface AiStreamError {
+  error: string
+}
+
 export const AI_IMAGE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif"
 export const AI_IMAGE_MAX_BYTES = 10 * 1024 * 1024 // 10MB

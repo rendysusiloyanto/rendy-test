@@ -6,7 +6,8 @@ import { AuthGuard } from "@/components/auth-guard"
 import { PremiumGuard } from "@/components/premium-guard"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { useAiChat, useAiChatWithImage } from "@/hooks/use-ai-chat"
+import { useAiChatWithImage } from "@/hooks/use-ai-chat"
+import { useAiChatStream } from "@/hooks/use-ai-chat-stream"
 import { ChatMessage } from "@/components/chat-message"
 import { AI_IMAGE_ACCEPT, AI_IMAGE_MAX_BYTES } from "@/lib/ai-types"
 import { Send, Loader2, ImagePlus, X, Bot } from "lucide-react"
@@ -16,21 +17,23 @@ type Message = { role: "user" | "assistant"; content: string }
 
 function AiAssistantContent() {
   const [messages, setMessages] = useState<Message[]>([])
+  const [streamingContent, setStreamingContent] = useState("")
   const [input, setInput] = useState("")
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [remainingToday, setRemainingToday] = useState<number | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const streamingContentRef = useRef("")
 
-  const chat = useAiChat()
+  const chatStream = useAiChatStream()
   const chatWithImage = useAiChatWithImage()
-  const isPending = chat.isPending || chatWithImage.isPending
+  const isPending = chatStream.isStreaming || chatWithImage.isPending
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages])
+  }, [messages, streamingContent])
 
   const handleSend = () => {
     const text = input.trim()
@@ -56,10 +59,32 @@ function AiAssistantContent() {
     if (!text) return
     setMessages((prev) => [...prev, { role: "user", content: text }])
     setInput("")
-    chat.mutate(text, {
-      onSuccess: (data) => {
-        setMessages((prev) => [...prev, { role: "assistant", content: data.reply }])
-        setRemainingToday(data.remaining_today)
+    streamingContentRef.current = ""
+    setStreamingContent("")
+    setMessages((prev) => [...prev, { role: "assistant", content: "" }])
+    chatStream.startStream(text, {
+      onDelta: (delta) => {
+        streamingContentRef.current += delta
+        setStreamingContent(streamingContentRef.current)
+      },
+      onDone: (remaining) => {
+        const finalContent = streamingContentRef.current
+        setMessages((prev) => {
+          const next = [...prev]
+          const last = next[next.length - 1]
+          if (last?.role === "assistant") {
+            next[next.length - 1] = { ...last, content: finalContent }
+          }
+          return next
+        })
+        streamingContentRef.current = ""
+        setStreamingContent("")
+        setRemainingToday(remaining)
+      },
+      onError: () => {
+        setMessages((prev) => prev.filter((_, i) => i < prev.length - 1))
+        streamingContentRef.current = ""
+        setStreamingContent("")
       },
     })
   }
@@ -100,10 +125,15 @@ function AiAssistantContent() {
                   <p className="text-sm">Send a message or upload an image to get started.</p>
                 </div>
               )}
-              {messages.map((m, i) => (
-                <ChatMessage key={i} role={m.role} content={m.content} />
-              ))}
-              {isPending && (
+              {messages.map((m, i) => {
+                const isLastAssistantStreaming =
+                  isPending &&
+                  i === messages.length - 1 &&
+                  m.role === "assistant"
+                const content = isLastAssistantStreaming ? streamingContent : m.content
+                return <ChatMessage key={i} role={m.role} content={content} />
+              })}
+              {isPending && messages[messages.length - 1]?.role !== "assistant" && (
                 <div className="flex justify-start">
                   <div className="rounded-2xl bg-muted border border-border px-4 py-3 flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin text-primary" />
