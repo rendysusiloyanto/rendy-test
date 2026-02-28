@@ -14,11 +14,11 @@
 export function normalizeMarkdown(text: string): string {
   if (!text?.trim()) return text
   let out = text
-  // Blank line before list when bullet follows colon (e.g. "Here's how it works: * You" → "works:\n\n* You")
+  // Blank line before list when bullet follows colon; don’t treat ":**Bold**" as list
   out = out.replace(/:\s*\n?\s*-/g, ":\n\n-")
-  out = out.replace(/:\s*\*/g, ":\n\n*")
-  // One bullet per line: " * " in the middle of text → newline before "* " (handles streamed "browser. * Your")
+  out = out.replace(/:\s*\*(?!\*)/g, ":\n\n*")
+  // One bullet per line: " - " and " * " (single asterisk only – don’t break " * **Bold**")
   out = out.replace(/\s+-\s+/g, "\n- ")
-  out = out.replace(/\s+\*\s+/g, "\n* ")
+  out = out.replace(/\s+\*(?!\*)\s+/g, "\n* ")
   return out
 }
