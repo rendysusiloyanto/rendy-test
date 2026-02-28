@@ -1,6 +1,7 @@
 "use client"
 
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Bot, User } from "lucide-react"
 
@@ -18,7 +19,7 @@ const markdownComponents = {
     if (isBlock) {
       return (
         <code
-          className="block rounded-lg bg-zinc-900 text-zinc-100 p-4 text-[13px] leading-relaxed overflow-x-auto border border-zinc-800 break-words"
+          className="block rounded-lg bg-zinc-900 text-zinc-100 p-4 text-[13px] leading-relaxed overflow-x-auto border border-zinc-800 break-words font-mono"
           {...props}
         >
           {children}
@@ -50,9 +51,73 @@ const markdownComponents = {
     </ul>
   ),
   ol: ({ children, ...props }: React.HTMLAttributes<HTMLOListElement>) => (
-    <ol className="my-2.5 pl-5 list-decimal space-y-1 leading-relaxed" {...props}>
+    <ol className="my-2.5 pl-6 list-decimal space-y-1 leading-relaxed" {...props}>
       {children}
     </ol>
+  ),
+  strong: ({ children, ...props }: React.HTMLAttributes<HTMLElement>) => (
+    <strong className="font-semibold" {...props}>
+      {children}
+    </strong>
+  ),
+  em: ({ children, ...props }: React.HTMLAttributes<HTMLElement>) => (
+    <em className="italic" {...props}>
+      {children}
+    </em>
+  ),
+  h1: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
+    <h1 className="text-lg font-semibold mt-4 mb-2 first:mt-0" {...props}>
+      {children}
+    </h1>
+  ),
+  h2: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
+    <h2 className="text-base font-semibold mt-3 mb-1.5" {...props}>
+      {children}
+    </h2>
+  ),
+  h3: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
+    <h3 className="text-sm font-semibold mt-2.5 mb-1" {...props}>
+      {children}
+    </h3>
+  ),
+  a: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary underline underline-offset-2 hover:no-underline"
+      {...props}
+    >
+      {children}
+    </a>
+  ),
+  table: ({ children, ...props }: React.HTMLAttributes<HTMLTableElement>) => (
+    <div className="my-3 overflow-x-auto rounded-lg border border-border">
+      <table className="w-full text-sm border-collapse" {...props}>
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) => (
+    <thead className="bg-muted/50" {...props}>
+      {children}
+    </thead>
+  ),
+  th: ({ children, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
+    <th className="border border-border px-3 py-2 text-left font-semibold" {...props}>
+      {children}
+    </th>
+  ),
+  td: ({ children, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
+    <td className="border border-border px-3 py-2" {...props}>
+      {children}
+    </td>
+  ),
+  tr: ({ children, ...props }: React.HTMLAttributes<HTMLTableRowElement>) => (
+    <tr {...props}>{children}</tr>
+  ),
+  tbody: ({ children, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) => (
+    <tbody {...props}>{children}</tbody>
   ),
 }
 
@@ -80,8 +145,10 @@ export function ChatMessage({ role, content, timestamp, isStreaming }: ChatMessa
           {isUser ? (
             <p className="text-sm whitespace-pre-wrap leading-relaxed">{content}</p>
           ) : (
-            <div className="text-sm prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:my-2 prose-headings:break-words prose-p:break-words">
-              <ReactMarkdown components={markdownComponents}>{content}</ReactMarkdown>
+            <div className="text-sm prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:break-words prose-p:break-words prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5">
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                {content}
+              </ReactMarkdown>
             </div>
           )}
           {isStreaming && (
