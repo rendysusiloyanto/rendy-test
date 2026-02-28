@@ -8,6 +8,8 @@ interface ChatMessageProps {
   role: "user" | "assistant"
   content: string
   timestamp?: string
+  /** When true, show blinking cursor after content (streaming) */
+  isStreaming?: boolean
 }
 
 const markdownComponents = {
@@ -16,7 +18,7 @@ const markdownComponents = {
     if (isBlock) {
       return (
         <code
-          className="block rounded-lg bg-zinc-900 text-zinc-100 p-4 text-[13px] leading-relaxed overflow-x-auto border border-zinc-800"
+          className="block rounded-lg bg-zinc-900 text-zinc-100 p-4 text-[13px] leading-relaxed overflow-x-auto border border-zinc-800 break-words"
           {...props}
         >
           {children}
@@ -25,7 +27,7 @@ const markdownComponents = {
     }
     return (
       <code
-        className="rounded bg-zinc-800/90 text-zinc-200 px-1.5 py-0.5 text-[13px] font-mono border border-zinc-700/50"
+        className="rounded bg-zinc-800/90 text-zinc-200 px-1.5 py-0.5 text-[13px] font-mono border border-zinc-700/50 break-all"
         {...props}
       >
         {children}
@@ -38,7 +40,7 @@ const markdownComponents = {
     </pre>
   ),
   p: ({ children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => (
-    <p className="my-2.5 leading-relaxed" {...props}>
+    <p className="my-2.5 leading-relaxed break-words" {...props}>
       {children}
     </p>
   ),
@@ -54,11 +56,11 @@ const markdownComponents = {
   ),
 }
 
-export function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
+export function ChatMessage({ role, content, timestamp, isStreaming }: ChatMessageProps) {
   const isUser = role === "user"
   return (
     <div
-      className={`flex w-full gap-3 max-w-2xl mx-auto ${isUser ? "flex-row-reverse" : "flex-row"} chat-message-in`}
+      className={`flex w-full gap-3 max-w-3xl mx-auto ${isUser ? "flex-row-reverse" : "flex-row"} chat-message-in`}
     >
       <Avatar className="h-8 w-8 flex-shrink-0 rounded-full border-2 border-background shadow-sm">
         <AvatarFallback
@@ -69,7 +71,7 @@ export function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
       </Avatar>
       <div className={`flex flex-col min-w-0 ${isUser ? "items-end" : "items-start"} max-w-[85%]`}>
         <div
-          className={`rounded-2xl px-4 py-3 shadow-sm ${
+          className={`rounded-2xl px-5 py-3 shadow-sm break-words ${
             isUser
               ? "bg-primary text-primary-foreground rounded-br-md"
               : "bg-card text-foreground border border-border rounded-bl-md shadow-sm"
@@ -78,9 +80,12 @@ export function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
           {isUser ? (
             <p className="text-sm whitespace-pre-wrap leading-relaxed">{content}</p>
           ) : (
-            <div className="text-sm prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:my-2">
+            <div className="text-sm prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:my-2 prose-headings:break-words prose-p:break-words">
               <ReactMarkdown components={markdownComponents}>{content}</ReactMarkdown>
             </div>
+          )}
+          {isStreaming && (
+            <span className="inline-block w-0.5 h-4 ml-0.5 align-middle bg-foreground cursor-blink rounded-sm" aria-hidden />
           )}
         </div>
         {timestamp && (

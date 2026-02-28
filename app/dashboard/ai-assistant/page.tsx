@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { AppShell } from "@/components/app-shell"
 import { AuthGuard } from "@/components/auth-guard"
 import { PremiumGuard } from "@/components/premium-guard"
@@ -10,7 +10,7 @@ import { useAiChatWithImage } from "@/hooks/use-ai-chat"
 import { useAiChatStream } from "@/hooks/use-ai-chat-stream"
 import { ChatMessage } from "@/components/chat-message"
 import { AI_IMAGE_ACCEPT, AI_IMAGE_MAX_BYTES } from "@/lib/ai-types"
-import { Send, Loader2, ImagePlus, X, Bot, Wrench, Globe, BookOpen, FileCode } from "lucide-react"
+import { Send, Loader2, ImagePlus, X, Bot, Wrench, Globe, BookOpen, FileCode, ArrowDown } from "lucide-react"
 import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
 
@@ -23,6 +23,8 @@ const SUGGESTIONS = [
   { label: "Analyze my config", icon: FileCode },
 ]
 
+const SCROLL_THRESHOLD = 80
+
 function formatMessageTime(d: Date) {
   return formatDistanceToNow(d, { addSuffix: true })
 }
@@ -33,6 +35,7 @@ function AiAssistantContent() {
   const [input, setInput] = useState("")
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [remainingToday, setRemainingToday] = useState<number | null>(null)
+  const [showScrollBottom, setShowScrollBottom] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -42,11 +45,28 @@ function AiAssistantContent() {
   const chatWithImage = useAiChatWithImage()
   const isPending = chatStream.isStreaming || chatWithImage.isPending
 
+  const scrollToBottom = useCallback(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })
+  }, [])
+
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
-  }, [messages, streamingContent])
+    scrollToBottom()
+  }, [messages, streamingContent, scrollToBottom])
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < SCROLL_THRESHOLD
+    setShowScrollBottom(!isNearBottom)
+  }, [])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    handleScroll()
+    el.addEventListener("scroll", handleScroll, { passive: true })
+    return () => el.removeEventListener("scroll", handleScroll)
+  }, [handleScroll, messages.length])
 
   useEffect(() => {
     textareaRef.current?.focus()
@@ -141,8 +161,8 @@ function AiAssistantContent() {
 
   return (
     <AppShell>
-      <div className="flex flex-col h-[calc(100vh-8rem)] max-w-2xl mx-auto w-full">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="flex flex-col h-[calc(100vh-120px)] max-w-5xl mx-auto w-full px-2">
+        <div className="flex items-center gap-2 mb-4 flex-shrink-0">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 shadow-sm">
             <Bot className="h-5 w-5 text-primary" />
           </div>
@@ -154,12 +174,12 @@ function AiAssistantContent() {
 
         <Card className="flex-1 flex flex-col min-h-0 border-border bg-card/80 shadow-lg shadow-black/5 backdrop-blur-sm overflow-hidden">
           <CardContent
-            className="flex flex-col flex-1 min-h-0 p-0 bg-gradient-to-b from-background/50 to-muted/20"
+            className="relative flex flex-col flex-1 min-h-0 p-0 bg-gradient-to-b from-background/50 to-muted/20"
             style={{ backgroundImage: "radial-gradient(ellipse at top, oklch(0.22 0.01 260 / 0.4) 0%, transparent 60%)" }}
           >
             <div
               ref={scrollRef}
-              className="flex-1 overflow-y-auto px-4 py-5 space-y-5"
+              className="chat-scroll-area flex-1 overflow-y-auto px-4 py-6 space-y-6"
             >
               {messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -195,15 +215,16 @@ function AiAssistantContent() {
                     role={m.role}
                     content={content}
                     timestamp={m.createdAt ? formatMessageTime(m.createdAt) : undefined}
+                    isStreaming={isLastAssistantStreaming}
                   />
                 )
               })}
               {isPending && messages[messages.length - 1]?.role !== "assistant" && (
-                <div className="flex w-full gap-3 max-w-2xl mx-auto chat-message-in">
+                <div className="flex w-full gap-3 max-w-3xl mx-auto chat-message-in">
                   <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2 border-background bg-muted shadow-sm">
                     <Bot className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <div className="rounded-2xl rounded-bl-md px-4 py-3 bg-card border border-border shadow-sm">
+                  <div className="rounded-2xl rounded-bl-md px-5 py-3 bg-card border border-border shadow-sm">
                     <p className="text-sm text-muted-foreground flex items-center gap-1.5">
                       <span className="inline-flex gap-1">
                         <span className="animate-pulse">AI is thinking</span>
@@ -215,9 +236,24 @@ function AiAssistantContent() {
               )}
             </div>
 
-            <div className="p-3 pt-2 border-t border-border/80 bg-card/30 space-y-2">
+            {showScrollBottom && (
+              <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-10">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-full shadow-md h-9 px-3 gap-1.5"
+                  onClick={scrollToBottom}
+                >
+                  <ArrowDown className="h-4 w-4" />
+                  Scroll to bottom
+                </Button>
+              </div>
+            )}
+
+            <div className="sticky bottom-0 p-3 pt-2 border-t border-border/80 bg-card/50 backdrop-blur-sm flex-shrink-0">
               {imageFile && (
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2 text-sm mb-2">
                   <span className="text-muted-foreground truncate flex-1">
                     {imageFile.name}
                   </span>
@@ -275,7 +311,7 @@ function AiAssistantContent() {
                 </Button>
               </div>
               {remainingToday != null && (
-                <p className="text-[11px] text-muted-foreground/90">
+                <p className="text-[11px] text-muted-foreground/90 mt-1.5">
                   Messages remaining today: {remainingToday}
                 </p>
               )}
