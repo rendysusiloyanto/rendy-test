@@ -48,17 +48,24 @@ const markdownComponents = {
     </p>
   ),
   ul: ({ children, ...props }: React.HTMLAttributes<HTMLUListElement>) => (
-    <ul className="my-3 pl-5 list-disc space-y-2 text-foreground/90 [&>li]:block first:mt-0 last:mb-0" {...props}>
+    <ul
+      className="my-3 pl-6 space-y-2 text-foreground/90 first:mt-0 last:mb-0 list-none [&>li]:relative [&>li]:pl-3 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:content-['•'] [&>li]:before:text-foreground/70 [&>li]:before:font-normal"
+      {...props}
+    >
       {children}
     </ul>
   ),
   ol: ({ children, ...props }: React.HTMLAttributes<HTMLOListElement>) => (
-    <ol className="my-3 pl-6 list-decimal space-y-2 text-foreground/90 [&>li]:block first:mt-0 last:mb-0" {...props}>
+    <ol
+      className="my-3 pl-6 list-decimal space-y-2 text-foreground/90 first:mt-0 last:mb-0 [counter-reset:list] [&>li]:list-item [&>li]:pl-1"
+      style={{ listStyleType: "decimal" }}
+      {...props}
+    >
       {children}
     </ol>
   ),
   li: ({ children, ...props }: React.HTMLAttributes<HTMLLIElement>) => (
-    <li className="pl-1 my-0.5 leading-7 break-words" {...props}>
+    <li className="my-0.5 leading-7 break-words block" {...props}>
       {children}
     </li>
   ),
