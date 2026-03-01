@@ -605,11 +605,20 @@ function AiAssistantContent() {
               </div>
               {(remainingToday != null || dailyLimit != null) && (
                 <p className="text-[11px] text-muted-foreground/80 mt-2.5 px-1">
-                  {dailyLimit != null && remainingToday != null
-                    ? `Chat: ${remainingToday} / ${dailyLimit} today`
-                    : remainingToday != null
-                      ? `Messages remaining today: ${remainingToday}`
-                      : `Daily limit: ${dailyLimit} messages`}
+                  {remainingToday != null && remainingToday === 0 ? (
+                    <>
+                      No messages left today{dailyLimit != null ? ` (${dailyLimit}/day)` : ""}. Resets tomorrow.
+                    </>
+                  ) : dailyLimit != null && remainingToday != null ? (
+                    <>
+                      <span className="text-foreground/90 font-medium">{remainingToday}</span> messages left today{" "}
+                      <span className="text-muted-foreground/70">(limit {dailyLimit}/day)</span>
+                    </>
+                  ) : remainingToday != null ? (
+                    `${remainingToday} messages left today`
+                  ) : dailyLimit != null ? (
+                    `Daily limit: ${dailyLimit} messages`
+                  ) : null}
                 </p>
               )}
             </div>
