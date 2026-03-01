@@ -159,7 +159,7 @@ export function ChatMessage({ role, content, timestamp, isStreaming, justFinishe
         </AvatarFallback>
       </Avatar>
       <div
-        className={`flex flex-col min-w-0 ${isUser ? "items-end" : "items-start"} max-w-2xl`}
+        className={`flex flex-col min-w-0 ${isUser ? "items-end" : "items-start"} ${isUser ? "max-w-2xl" : "max-w-xl"}`}
       >
         <div
           className={`rounded-2xl px-5 py-4 shadow-sm break-words ${

@@ -414,7 +414,7 @@ function AiAssistantContent() {
           >
             <div
               ref={scrollRef}
-              className={`chat-scroll-area flex-1 overflow-y-auto py-6 ${!sidebarOpen ? "flex flex-col items-center px-2" : "px-2"}`}
+              className={`chat-scroll-area flex-1 overflow-y-auto py-6 ${!sidebarOpen ? "flex flex-col items-center px-1" : "px-1"}`}
             >
               <div className={`w-full space-y-6 ${!sidebarOpen ? "max-w-3xl" : ""}`}>
               {historyLoading && (
