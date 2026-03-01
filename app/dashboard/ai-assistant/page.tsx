@@ -180,6 +180,7 @@ function AiAssistantContent() {
           streamThrottleRef.current = null
         }
         const finalContent = streamingBufferRef.current
+        setStreamingBuffer(finalContent)
         setMessages((prev) => {
           const next = [...prev]
           const last = next[next.length - 1]
