@@ -119,6 +119,24 @@
   animation: cursor-blink 1s step-end infinite;
 }
 
+@keyframes card-refresh {
+  0% {
+    opacity: 0.92;
+    transform: scale(0.995);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.chat-card-refresh {
+  animation: card-refresh 0.35s ease-out forwards;
+}
+
 .chat-scroll-area {
   scroll-behavior: smooth;
 }

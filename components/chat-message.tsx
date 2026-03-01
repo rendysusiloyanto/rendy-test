@@ -21,6 +21,8 @@ interface ChatMessageProps {
   timestamp?: string
   /** When true, show blinking cursor after content (streaming) */
   isStreaming?: boolean
+  /** When true, play card refresh animation then show Markdown (after stream done) */
+  justFinishedStreaming?: boolean
 }
 
 const markdownComponents = {
@@ -143,7 +145,7 @@ const markdownComponents = {
   ),
 }
 
-export function ChatMessage({ role, content, timestamp, isStreaming }: ChatMessageProps) {
+export function ChatMessage({ role, content, timestamp, isStreaming, justFinishedStreaming }: ChatMessageProps) {
   const isUser = role === "user"
   return (
     <div
@@ -162,7 +164,7 @@ export function ChatMessage({ role, content, timestamp, isStreaming }: ChatMessa
             isUser
               ? "bg-primary text-primary-foreground rounded-br-md"
               : "bg-card/95 text-foreground border border-border/50 rounded-bl-md shadow-sm"
-          }`}
+          } ${justFinishedStreaming ? "chat-card-refresh" : ""}`}
         >
           {isUser ? (
             <p className="text-sm whitespace-pre-wrap leading-5">{content ?? ""}</p>

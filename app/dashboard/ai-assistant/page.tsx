@@ -31,6 +31,7 @@ const SCROLL_THRESHOLD = 80
 /** Parse Markdown every N ms during stream so partial fences get time to complete; when done, final content parses once. */
 const STREAM_RENDER_INTERVAL_MS = 400
 const STREAM_MODE_STORAGE_KEY = "ai-assistant-use-stream"
+const SIDEBAR_OPEN_STORAGE_KEY = "ai-assistant-sidebar-open"
 
 function formatMessageTime(createdAt: string) {
   return formatDistanceToNow(new Date(createdAt), { addSuffix: true })
@@ -48,6 +49,8 @@ function AiAssistantContent() {
   const [useStreamMode, setUseStreamModeState] = useState(true)
   const [bulkPending, setBulkPending] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [displayedStreamingLength, setDisplayedStreamingLength] = useState(0)
+  const [justFinishedStreaming, setJustFinishedStreaming] = useState(false)
 
   const setUseStreamMode = useCallback((value: boolean) => {
     setUseStreamModeState(value)
@@ -73,12 +76,24 @@ function AiAssistantContent() {
 
   useEffect(() => {
     if (typeof window === "undefined") return
-    const mq = window.matchMedia("(min-width: 768px)")
-    if (mq.matches) setSidebarOpen(true)
-    const handler = (e: MediaQueryListEvent) => setSidebarOpen(e.matches)
-    mq.addEventListener("change", handler)
-    return () => mq.removeEventListener("change", handler)
+    try {
+      const stored = localStorage.getItem(SIDEBAR_OPEN_STORAGE_KEY)
+      if (stored === "0") setSidebarOpen(false)
+      else if (stored === "1") setSidebarOpen(true)
+      else setSidebarOpen(window.matchMedia("(min-width: 768px)").matches)
+    } catch {
+      setSidebarOpen(window.matchMedia("(min-width: 768px)").matches)
+    }
   }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      localStorage.setItem(SIDEBAR_OPEN_STORAGE_KEY, sidebarOpen ? "1" : "0")
+    } catch {
+      // ignore
+    }
+  }, [sidebarOpen])
   const [historyError, setHistoryError] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -86,8 +101,33 @@ function AiAssistantContent() {
   const streamingBufferRef = useRef("")
   const streamThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const streamLastFlushRef = useRef(0)
+  const typingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const chatStream = useAiChatStream()
+
+  useEffect(() => {
+    if (!chatStream.isStreaming) return
+    typingIntervalRef.current = setInterval(() => {
+      setDisplayedStreamingLength((prev) => {
+        const target = streamingBufferRef.current.length
+        if (prev >= target) return prev
+        const step = Math.min(4, target - prev)
+        return prev + step
+      })
+    }, 24)
+    return () => {
+      if (typingIntervalRef.current) {
+        clearInterval(typingIntervalRef.current)
+        typingIntervalRef.current = null
+      }
+    }
+  }, [chatStream.isStreaming])
+
+  useEffect(() => {
+    if (!justFinishedStreaming) return
+    const t = setTimeout(() => setJustFinishedStreaming(false), 400)
+    return () => clearTimeout(t)
+  }, [justFinishedStreaming])
   const chatWithImage = useAiChatWithImage()
   const isPending = chatStream.isStreaming || chatWithImage.isPending || bulkPending
 
@@ -233,6 +273,7 @@ function AiAssistantContent() {
 
     streamingBufferRef.current = ""
     setStreamingBuffer("")
+    setDisplayedStreamingLength(0)
     setMessages((prev) => [...prev, { role: "assistant", content: "", created_at: new Date().toISOString() }])
     chatStream.startStream(text, {
       onDelta: (delta) => {
@@ -257,6 +298,8 @@ function AiAssistantContent() {
         const finalContent = streamingBufferRef.current
         setStreamingBuffer("")
         streamingBufferRef.current = ""
+        setDisplayedStreamingLength(0)
+        setJustFinishedStreaming(true)
         setRemainingToday(remaining)
         setMessages((prev) => {
           const next = [...prev]
@@ -416,7 +459,11 @@ function AiAssistantContent() {
                 messages.map((m, i) => {
                   const isLastAssistantStreaming =
                     isPending && i === messages.length - 1 && m.role === "assistant"
-                  const content = isLastAssistantStreaming ? streamingBuffer : m.content
+                  const content = isLastAssistantStreaming
+                    ? streamingBuffer.slice(0, Math.min(displayedStreamingLength, streamingBuffer.length))
+                    : m.content
+                  const showRefresh =
+                    justFinishedStreaming && i === messages.length - 1 && m.role === "assistant"
                   return (
                     <ChatMessage
                       key={m.id ?? `msg-${i}`}
@@ -424,6 +471,7 @@ function AiAssistantContent() {
                       content={content}
                       timestamp={formatMessageTime(m.created_at)}
                       isStreaming={isLastAssistantStreaming}
+                      justFinishedStreaming={showRefresh}
                     />
                   )
                 })}
