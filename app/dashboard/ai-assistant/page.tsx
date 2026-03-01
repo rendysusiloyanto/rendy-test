@@ -44,6 +44,8 @@ function AiAssistantContent() {
   const [remainingToday, setRemainingToday] = useState<number | null>(null)
   const [showScrollBottom, setShowScrollBottom] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(true)
+  const [useStreamMode, setUseStreamMode] = useState(true)
+  const [bulkPending, setBulkPending] = useState(false)
   const [historyError, setHistoryError] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -54,7 +56,7 @@ function AiAssistantContent() {
 
   const chatStream = useAiChatStream()
   const chatWithImage = useAiChatWithImage()
-  const isPending = chatStream.isStreaming || chatWithImage.isPending
+  const isPending = chatStream.isStreaming || chatWithImage.isPending || bulkPending
 
   // Load history on mount; replace state entirely (no conversation_id – backend owns one conversation per user)
   useEffect(() => {
@@ -156,6 +158,46 @@ function AiAssistantContent() {
     if (!text) return
     setMessages((prev) => [...prev, { role: "user", content: text, created_at: nowIso }])
     setInput("")
+
+    if (!useStreamMode) {
+      setBulkPending(true)
+      try {
+        const data = await aiApi.chat({ message: text })
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: data.reply, created_at: new Date().toISOString() },
+        ])
+        setRemainingToday(data.remaining_today)
+      } catch (err) {
+        if (err instanceof ApiError) {
+          if (err.status === 401) {
+            router.push("/login")
+            return
+          }
+          if (err.status === 403) {
+            toast.error("Premium required to use AI assistant.")
+            setMessages((prev) => prev.slice(0, -1))
+            return
+          }
+          if (err.status === 429) {
+            const body = err.body as { remaining_today?: number } | undefined
+            toast.error(
+              body?.remaining_today != null
+                ? `Daily limit reached. ${body.remaining_today} messages left today.`
+                : "Daily message limit exceeded."
+            )
+            setMessages((prev) => prev.slice(0, -1))
+            return
+          }
+        }
+        toast.error("Failed to send message.")
+        setMessages((prev) => prev.slice(0, -1))
+      } finally {
+        setBulkPending(false)
+      }
+      return
+    }
+
     streamingBufferRef.current = ""
     setStreamingBuffer("")
     setMessages((prev) => [...prev, { role: "assistant", content: "", created_at: new Date().toISOString() }])
@@ -232,14 +274,33 @@ function AiAssistantContent() {
 
   return (
     <AppShell>
-      <div className="flex flex-col h-[calc(100vh-120px)] max-w-5xl mx-auto w-full px-2">
-        <div className="flex items-center gap-2 mb-4 flex-shrink-0">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 shadow-sm">
-            <Bot className="h-5 w-5 text-primary" />
+      <div className="flex flex-col h-[calc(100vh-88px)] max-w-6xl mx-auto w-full px-2">
+        <div className="flex items-center justify-between gap-2 mb-4 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 shadow-sm">
+              <Bot className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-foreground">AI Assistant</h1>
+              <p className="text-xs text-muted-foreground">Premium</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-semibold text-foreground">AI Assistant</h1>
-            <p className="text-xs text-muted-foreground">Premium · Streams Markdown</p>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Chat:</span>
+            <button
+              type="button"
+              onClick={() => setUseStreamMode(true)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${useStreamMode ? "bg-primary text-primary-foreground" : "bg-muted/80 text-muted-foreground hover:bg-muted"}`}
+            >
+              Stream
+            </button>
+            <button
+              type="button"
+              onClick={() => setUseStreamMode(false)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${!useStreamMode ? "bg-primary text-primary-foreground" : "bg-muted/80 text-muted-foreground hover:bg-muted"}`}
+            >
+              Bulk
+            </button>
           </div>
         </div>
 

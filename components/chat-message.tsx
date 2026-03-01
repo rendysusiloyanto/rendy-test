@@ -166,6 +166,8 @@ export function ChatMessage({ role, content, timestamp, isStreaming }: ChatMessa
         >
           {isUser ? (
             <p className="text-sm whitespace-pre-wrap leading-5">{content ?? ""}</p>
+          ) : isStreaming ? (
+            <p className="text-sm whitespace-pre-wrap leading-5 text-foreground/90">{content ?? ""}</p>
           ) : (
             <div className="text-[15px] leading-5 prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap prose-headings:font-semibold prose-headings:break-words prose-p:break-words prose-code:font-mono prose-code:before:content-none prose-code:after:content-none [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1">
               <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
