@@ -36,7 +36,12 @@ function formatMessageTime(createdAt: string) {
 function AiAssistantContent() {
   const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([])
-  const [streamingContent, setStreamingContent] = useState("")
+  /**
+   * Streaming buffer: full text accumulated so far (all deltas appended).
+   * We re-render the entire buffer as Markdown on every delta — no per-chunk parsing.
+   * Same approach as ChatGPT / Claude / Gemini UI.
+   */
+  const [streamingBuffer, setStreamingBuffer] = useState("")
   const [input, setInput] = useState("")
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [remainingToday, setRemainingToday] = useState<number | null>(null)
@@ -46,7 +51,7 @@ function AiAssistantContent() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const streamingContentRef = useRef("")
+  const streamingBufferRef = useRef("")
 
   const chatStream = useAiChatStream()
   const chatWithImage = useAiChatWithImage()
@@ -103,7 +108,7 @@ function AiAssistantContent() {
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages, streamingContent, scrollToBottom])
+  }, [messages, streamingBuffer, scrollToBottom])
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current
@@ -152,16 +157,16 @@ function AiAssistantContent() {
     if (!text) return
     setMessages((prev) => [...prev, { role: "user", content: text, created_at: nowIso }])
     setInput("")
-    streamingContentRef.current = ""
-    setStreamingContent("")
+    streamingBufferRef.current = ""
+    setStreamingBuffer("")
     setMessages((prev) => [...prev, { role: "assistant", content: "", created_at: new Date().toISOString() }])
     chatStream.startStream(text, {
       onDelta: (delta) => {
-        streamingContentRef.current += delta
-        setStreamingContent(streamingContentRef.current)
+        streamingBufferRef.current += delta
+        setStreamingBuffer(streamingBufferRef.current)
       },
       onDone: (remaining) => {
-        const finalContent = streamingContentRef.current
+        const finalContent = streamingBufferRef.current
         setMessages((prev) => {
           const next = [...prev]
           const last = next[next.length - 1]
@@ -170,14 +175,14 @@ function AiAssistantContent() {
           }
           return next
         })
-        streamingContentRef.current = ""
-        setStreamingContent("")
+        streamingBufferRef.current = ""
+        setStreamingBuffer("")
         setRemainingToday(remaining)
       },
       onError: () => {
         setMessages((prev) => prev.filter((_, i) => i < prev.length - 1))
-        streamingContentRef.current = ""
-        setStreamingContent("")
+        streamingBufferRef.current = ""
+        setStreamingBuffer("")
       },
     })
   }
@@ -275,7 +280,7 @@ function AiAssistantContent() {
                 messages.map((m, i) => {
                   const isLastAssistantStreaming =
                     isPending && i === messages.length - 1 && m.role === "assistant"
-                  const content = isLastAssistantStreaming ? streamingContent : m.content
+                  const content = isLastAssistantStreaming ? streamingBuffer : m.content
                   return (
                     <ChatMessage
                       key={m.id ?? `msg-${i}`}
