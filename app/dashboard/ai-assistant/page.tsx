@@ -316,12 +316,14 @@ function AiAssistantContent() {
           />
         )}
         <aside
-          className={`flex-shrink-0 flex flex-col gap-4 py-4 border-r border-border bg-background/95 backdrop-blur-sm transition-[transform,width] duration-200 ease-out z-50
+          className={`flex flex-col gap-4 py-4 border-r border-border bg-background/95 backdrop-blur-sm transition-[transform,width] duration-200 ease-out z-50
             fixed md:relative inset-y-0 left-0
-            w-52 md:w-40 md:transition-[width] md:overflow-hidden
-            ${sidebarOpen ? "translate-x-0 md:w-40" : "-translate-x-full md:translate-x-0 md:w-0 md:min-w-0 md:py-0 md:border-r-0 md:opacity-0"}`}
+            w-52 md:w-40 md:overflow-hidden
+            ${sidebarOpen
+              ? "translate-x-0 flex-shrink-0 md:w-40"
+              : "-translate-x-full md:translate-x-0 md:w-0 md:min-w-0 md:max-w-0 md:shrink md:py-0 md:px-0 md:border-r-0 md:opacity-0"}`}
         >
-          <div className="flex items-center gap-2 px-3 md:pr-3 min-w-[10rem] md:min-w-[8rem]">
+          <div className={`flex items-center gap-2 px-3 md:pr-3 min-w-0 ${sidebarOpen ? "min-w-[10rem] md:min-w-[8rem]" : "md:min-w-0"}`}>
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 shadow-sm">
               <Bot className="h-5 w-5 text-primary" />
             </div>
@@ -330,7 +332,7 @@ function AiAssistantContent() {
               <p className="text-[11px] text-muted-foreground">Premium</p>
             </div>
           </div>
-          <div className="flex flex-col gap-1.5 px-3 min-w-[10rem] md:min-w-[8rem]">
+          <div className={`flex flex-col gap-1.5 px-3 min-w-0 ${sidebarOpen ? "min-w-[10rem] md:min-w-[8rem]" : "md:min-w-0"}`}>
             <span className="text-xs text-muted-foreground font-medium">Chat</span>
             <button
               type="button"
@@ -349,7 +351,7 @@ function AiAssistantContent() {
           </div>
         </aside>
 
-        <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
+        <div className="flex-1 min-w-0 w-full flex flex-col min-h-0 relative">
           <div className="flex items-center gap-2 flex-shrink-0 py-2 md:py-1">
             <Button
               type="button"
