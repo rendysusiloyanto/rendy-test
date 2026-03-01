@@ -149,7 +149,7 @@ export function ChatMessage({ role, content, timestamp, isStreaming, justFinishe
   const isUser = role === "user"
   return (
     <div
-      className={`flex w-full gap-3 max-w-3xl mx-auto ${isUser ? "flex-row-reverse" : "flex-row"} chat-message-in`}
+      className={`flex w-full gap-2 ${isUser ? "flex-row-reverse" : "flex-row"} chat-message-in`}
     >
       <Avatar className="h-8 w-8 flex-shrink-0 rounded-full border-2 border-background shadow-sm">
         <AvatarFallback
@@ -158,7 +158,9 @@ export function ChatMessage({ role, content, timestamp, isStreaming, justFinishe
           {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
         </AvatarFallback>
       </Avatar>
-      <div className={`flex flex-col min-w-0 ${isUser ? "items-end" : "items-start"} max-w-[85%]`}>
+      <div
+        className={`flex flex-col min-w-0 ${isUser ? "items-end" : "items-start"} max-w-2xl`}
+      >
         <div
           className={`rounded-2xl px-5 py-4 shadow-sm break-words ${
             isUser
