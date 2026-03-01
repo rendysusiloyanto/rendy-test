@@ -203,6 +203,20 @@ function AiAssistantContent() {
     textareaRef.current?.focus()
   }, [])
 
+  const MIN_TEXTAREA_HEIGHT = 40
+  const MAX_TEXTAREA_HEIGHT = 128
+
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = "auto"
+    const h = Math.min(Math.max(el.scrollHeight, MIN_TEXTAREA_HEIGHT), MAX_TEXTAREA_HEIGHT)
+    el.style.height = `${h}px`
+    if (input.includes("\n")) {
+      el.scrollIntoView({ block: "nearest", behavior: "smooth" })
+    }
+  }, [input])
+
   const handleSend = async () => {
     const text = input.trim()
     const nowIso = new Date().toISOString()
