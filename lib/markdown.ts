@@ -12,8 +12,12 @@
  * // → "Berikut fungsi:\n\n- Memberikan informasi\n- Menjawab pertanyaan"
  */
 
+/** True if line is a section heading: "- **Title:**" or "- Key Capabilities:" (bullet + label + colon, line ends). */
 function isHeadingBullet(line: string): boolean {
-  return /^\s*[-*]\s+\*\*[^*]+\*\*:\s*$/.test(line.trim())
+  const t = line.trim()
+  if (/^\s*[-*]\s+\*\*[^*]+\*\*:\s*$/.test(line.trim())) return true
+  // Plain heading (no bold): "- Key Capabilities:" or "- Applications:" (nothing after the colon)
+  return /^[-*]\s+[^:\n]+:\s*$/.test(t)
 }
 
 function isTopLevelBullet(line: string): boolean {
@@ -56,6 +60,10 @@ export function normalizeMarkdown(text: string): string {
   out = out.replace(/(?<!\n)\s+-\s+(?=[A-Z0-9])/g, "\n- ")
   out = out.replace(/(?<!\n)\s+\*(?!\*)\s+/g, "\n* ")
   out = indentSublistsUnderHeadings(out)
-  out = out.replace(/\.\s*(Apakah ada [^.?]*\?)/gi, ".\n\n$1")
+  // Put closing questions on their own line (ID + EN)
+  out = out.replace(
+    /\.\s*(Apakah ada [^.?]*\?|Do you have any [^.?]*\?|Would you like to [^.?]*\?|Is there anything [^.?]*\?)/gi,
+    ".\n\n$1"
+  )
   return out
 }
