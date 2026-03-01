@@ -15,11 +15,14 @@ export function normalizeMarkdown(text: string): string {
   if (!text?.trim()) return text
   let out = text
   // Blank line before list when bullet follows colon; don’t treat ":**Bold**" as list
-  out = out.replace(/:\s*\n?\s*-/g, ":\n\n-")
-  out = out.replace(/:\s*\*(?!\*)/g, ":\n\n*")
+  // Preserve indent so sublists stay (e.g. ":\n  -" → ":\n\n  -")
+  out = out.replace(/:\s*\n?\s*(\s*)-/g, ":\n\n$1-")
+  out = out.replace(/:\s*\n?\s*(\s*)\*(?!\*)/g, ":\n\n$1*")
   // One bullet per line: " - " and " * " only when followed by list-item start (avoid "X - jika relevan").
   // Use (?<!\n) so we do NOT replace when the bullet is already at line start (preserves nested lists like "  - subitem").
   out = out.replace(/(?<!\n)\s+-\s+(?=[A-Z0-9])/g, "\n- ")
   out = out.replace(/(?<!\n)\s+\*(?!\*)\s+/g, "\n* ")
+  // Ensure closing question on its own line (fixes streaming where it is appended without newline)
+  out = out.replace(/\.\s*(Apakah ada hal lain[^.?]*[.?])/gi, ".\n\n$1")
   return out
 }
