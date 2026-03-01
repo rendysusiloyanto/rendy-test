@@ -297,36 +297,37 @@ function AiAssistantContent() {
 
   return (
     <AppShell>
-      <div className="flex flex-col h-[calc(100vh-88px)] max-w-6xl mx-auto w-full px-2">
-        <div className="flex items-center gap-3 mb-4 flex-shrink-0 flex-wrap">
+      <div className="flex h-[calc(100vh-88px)] w-full max-w-7xl mx-auto px-2 gap-3">
+        <aside className="flex-shrink-0 w-40 flex flex-col gap-4 py-4 border-r border-border pr-3">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 shadow-sm">
               <Bot className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-foreground">AI Assistant</h1>
-              <p className="text-xs text-muted-foreground">Premium</p>
+              <h1 className="text-lg font-semibold text-foreground leading-tight">AI Assistant</h1>
+              <p className="text-[11px] text-muted-foreground">Premium</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Chat:</span>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-muted-foreground font-medium">Chat</span>
             <button
               type="button"
               onClick={() => setUseStreamMode(true)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${useStreamMode ? "bg-primary text-primary-foreground" : "bg-muted/80 text-muted-foreground hover:bg-muted"}`}
+              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${useStreamMode ? "bg-primary text-primary-foreground" : "bg-muted/80 text-muted-foreground hover:bg-muted"}`}
             >
               Stream
             </button>
             <button
               type="button"
               onClick={() => setUseStreamMode(false)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${!useStreamMode ? "bg-primary text-primary-foreground" : "bg-muted/80 text-muted-foreground hover:bg-muted"}`}
+              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${!useStreamMode ? "bg-primary text-primary-foreground" : "bg-muted/80 text-muted-foreground hover:bg-muted"}`}
             >
               Non-stream
             </button>
           </div>
-        </div>
+        </aside>
 
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
         <Card className="flex-1 flex flex-col min-h-0 border-border bg-card/80 shadow-lg shadow-black/5 backdrop-blur-sm overflow-hidden">
           <CardContent
             className="relative flex flex-col flex-1 min-h-0 p-0 bg-gradient-to-b from-background/50 to-muted/20"
@@ -489,6 +490,7 @@ function AiAssistantContent() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     </AppShell>
   )
