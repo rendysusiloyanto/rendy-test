@@ -12,12 +12,16 @@
  * // → "Berikut fungsi:\n\n- Memberikan informasi\n- Menjawab pertanyaan"
  */
 
-/** True if line is a section heading: "- **Title:**" or "- Key Capabilities:" (bullet + label + colon, line ends). */
+/** True if line is a section heading: "- **Tujuan:**", "- Tujuan:", "**Tujuan:**", or "Tujuan:" (line ends at colon). */
 function isHeadingBullet(line: string): boolean {
   const t = line.trim()
-  if (/^\s*[-*]\s+\*\*[^*]+\*\*:\s*$/.test(line.trim())) return true
-  // Plain heading (no bold): "- Key Capabilities:" or "- Applications:" (nothing after the colon)
-  return /^[-*]\s+[^:\n]+:\s*$/.test(t)
+  // With bullet: "- **Title:**" or "- Title:"
+  if (/^[-*]\s+\*\*[^*]+\*\*:\s*$/.test(t)) return true
+  if (/^[-*]\s+[^:\n]+:\s*$/.test(t)) return true
+  // Without bullet: "**Tujuan:**" or "Tujuan:" (so AI output like "Tujuan:\n- Item" still gets sublist)
+  if (/^\*\*[^*]+\*\*:\s*$/.test(t)) return true
+  if (/^[^:\n]+:\s*$/.test(t)) return true
+  return false
 }
 
 function isTopLevelBullet(line: string): boolean {
@@ -42,7 +46,8 @@ function indentSublistsUnderHeadings(text: string): string {
       out.push("  " + line)
       continue
     }
-    inSubsection = false
+    // Don't reset on blank line (common between heading and sub-items); only reset on real content that isn't a bullet/heading
+    if (line.trim() !== "") inSubsection = false
     out.push(line)
   }
   return out.join("\n")
