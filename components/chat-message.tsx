@@ -6,12 +6,13 @@ import remarkBreaks from "remark-breaks"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Bot, User } from "lucide-react"
 
-/** Ensure code fences have required newlines so streamed Markdown parses (```lang + newline, ``` + newline). */
+/** Ensure code fences parse: newline after ```lang, and no leading spaces on fence lines (so closing ``` is recognized). */
 function ensureMarkdownNewlines(text: string): string {
   if (!text?.trim()) return text
   return text
     .replace(/```(\w+)\s+/g, "```$1\n")
     .replace(/```\s+/g, "```\n")
+    .replace(/\n[ \t]+```/g, "\n```")
 }
 
 interface ChatMessageProps {
