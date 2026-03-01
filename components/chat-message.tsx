@@ -49,7 +49,7 @@ const markdownComponents = {
   ),
   ul: ({ children, ...props }: React.HTMLAttributes<HTMLUListElement>) => (
     <ul
-      className="my-1 pl-6 space-y-0 text-foreground/90 first:mt-0 last:mb-0 list-none [&>li]:relative [&>li]:pl-3 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:content-['•'] [&>li]:before:text-foreground/70 [&>li]:before:font-normal"
+      className="my-1 pl-6 space-y-0 text-foreground/90 first:mt-0 last:mb-0 list-none [&>li]:relative [&>li]:pl-3 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:content-['•'] [&>li]:before:text-foreground/70 [&>li]:before:font-normal [&_ul]:pl-5 [&_ul]:mt-0.5 [&_ul]:mb-0.5"
       {...props}
     >
       {children}
@@ -57,7 +57,7 @@ const markdownComponents = {
   ),
   ol: ({ children, ...props }: React.HTMLAttributes<HTMLOListElement>) => (
     <ol
-      className="my-1 pl-6 list-decimal space-y-0 text-foreground/90 first:mt-0 last:mb-0 [counter-reset:list] [&>li]:list-item [&>li]:pl-1"
+      className="my-1 pl-6 list-decimal space-y-0 text-foreground/90 first:mt-0 last:mb-0 [counter-reset:list] [&>li]:list-item [&>li]:pl-1 [&_ol]:pl-5 [&_ol]:mt-0.5 [&_ol]:mb-0.5"
       style={{ listStyleType: "decimal" }}
       {...props}
     >

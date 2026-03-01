@@ -1,0 +1,15 @@
+---
+description: AI chat Markdown rendering and normalizer rules
+globs: lib/markdown.ts, components/chat-message.tsx
+alwaysApply: false
+---
+
+# AI Chat Markdown
+
+- **Render:** Assistant messages use `ReactMarkdown` with `remarkGfm` and `remarkBreaks` on `normalizeMarkdown(content)`. User messages stay plain text with `whitespace-pre-wrap`. No `dangerouslySetInnerHTML`.
+- **Normalizer (`lib/markdown.ts`):** Blank line before list after colon (`:\n\n-`, `:\n\n*`); single-asterisk only for `*` so ` * **Bold**` is not broken. Replace ` - ` with `\n- ` only when followed by `[A-Z0-9]` (avoid splitting "X - jika relevan"). Replace ` * ` (single *) with `\n* `.
+- **Lists:** `ul` uses custom bullet via `::before` with `content: '•'` so bullets always show. Keep spacing tight: `leading-5`, `my-1`, `space-y-0`, `li` with `py-0.5`.
+- **Streaming:** Do not change streaming state logic or backend; only the rendering layer (ChatMessage + normalizeMarkdown) may change.
+- **Nested lists:** Require backend to send sub-items with 2 spaces before `*` (e.g. `  * CI/CD`). Frontend renders standard Markdown.
+
+Full prompt: `.cursor/prompts/ai-chat-markdown.md`
