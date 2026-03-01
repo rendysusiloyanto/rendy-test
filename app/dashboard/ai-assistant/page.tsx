@@ -43,6 +43,7 @@ function AiAssistantContent() {
   const [input, setInput] = useState("")
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [remainingToday, setRemainingToday] = useState<number | null>(null)
+  const [dailyLimit, setDailyLimit] = useState<number | null>(null)
   const [showScrollBottom, setShowScrollBottom] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(true)
   const [useStreamMode, setUseStreamModeState] = useState(true)
@@ -157,6 +158,27 @@ function AiAssistantContent() {
       cancelled = true
     }
   }, [router])
+
+  // Load daily chat limit (5 non-premium, 30 premium) for display
+  useEffect(() => {
+    let cancelled = false
+    aiApi
+      .getChatDailyLimit()
+      .then((data) => {
+        if (!cancelled) {
+          setDailyLimit(data.limit)
+          setRemainingToday(data.remaining_today)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          // ignore; remaining_today will come from chat responses
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const fetchHistoryRetry = useCallback(() => {
     setHistoryError(false)
@@ -581,9 +603,13 @@ function AiAssistantContent() {
                   )}
                 </Button>
               </div>
-              {remainingToday != null && (
+              {(remainingToday != null || dailyLimit != null) && (
                 <p className="text-[11px] text-muted-foreground/80 mt-2.5 px-1">
-                  Messages remaining today: {remainingToday}
+                  {dailyLimit != null && remainingToday != null
+                    ? `Chat: ${remainingToday} / ${dailyLimit} today`
+                    : remainingToday != null
+                      ? `Messages remaining today: ${remainingToday}`
+                      : `Daily limit: ${dailyLimit} messages`}
                 </p>
               )}
             </div>
