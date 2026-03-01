@@ -8,7 +8,6 @@ import { PremiumGuard } from "@/components/premium-guard"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useAiChatWithImage } from "@/hooks/use-ai-chat"
-import { useAiChatStream } from "@/hooks/use-ai-chat-stream"
 import { ChatMessage } from "@/components/chat-message"
 import { aiApi } from "@/lib/ai-api"
 import { AI_IMAGE_ACCEPT, AI_IMAGE_MAX_BYTES, type AiChatHistoryMessage } from "@/lib/ai-types"
@@ -17,7 +16,7 @@ import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
 import { ApiError } from "@/lib/api"
 
-/** Message shape matches backend history; id optional for optimistic (streaming) messages */
+/** Message shape matches backend history */
 type Message = Omit<AiChatHistoryMessage, "id"> & { id?: number }
 
 const SUGGESTIONS = [
@@ -36,26 +35,19 @@ function formatMessageTime(createdAt: string) {
 function AiAssistantContent() {
   const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([])
-  /**
-   * Streaming buffer: full text accumulated so far (all deltas appended).
-   * We re-render the entire buffer as Markdown on every delta — no per-chunk parsing.
-   * Same approach as ChatGPT / Claude / Gemini UI.
-   */
-  const [streamingBuffer, setStreamingBuffer] = useState("")
   const [input, setInput] = useState("")
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [remainingToday, setRemainingToday] = useState<number | null>(null)
   const [showScrollBottom, setShowScrollBottom] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(true)
   const [historyError, setHistoryError] = useState(false)
+  const [sending, setSending] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const streamingBufferRef = useRef("")
 
-  const chatStream = useAiChatStream()
   const chatWithImage = useAiChatWithImage()
-  const isPending = chatStream.isStreaming || chatWithImage.isPending
+  const isPending = sending || chatWithImage.isPending
 
   // Load history on mount; replace state entirely (no conversation_id – backend owns one conversation per user)
   useEffect(() => {
@@ -108,7 +100,7 @@ function AiAssistantContent() {
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages, streamingBuffer, scrollToBottom])
+  }, [messages, scrollToBottom])
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current
@@ -129,7 +121,7 @@ function AiAssistantContent() {
     textareaRef.current?.focus()
   }, [])
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const text = input.trim()
     const nowIso = new Date().toISOString()
     if (imageFile) {
@@ -157,34 +149,38 @@ function AiAssistantContent() {
     if (!text) return
     setMessages((prev) => [...prev, { role: "user", content: text, created_at: nowIso }])
     setInput("")
-    streamingBufferRef.current = ""
-    setStreamingBuffer("")
-    setMessages((prev) => [...prev, { role: "assistant", content: "", created_at: new Date().toISOString() }])
-    chatStream.startStream(text, {
-      onDelta: (delta) => {
-        streamingBufferRef.current += delta
-        setStreamingBuffer(streamingBufferRef.current)
-      },
-      onDone: (remaining) => {
-        const finalContent = streamingBufferRef.current
-        setMessages((prev) => {
-          const next = [...prev]
-          const last = next[next.length - 1]
-          if (last?.role === "assistant") {
-            next[next.length - 1] = { ...last, content: finalContent }
-          }
-          return next
-        })
-        streamingBufferRef.current = ""
-        setStreamingBuffer("")
-        setRemainingToday(remaining)
-      },
-      onError: () => {
-        setMessages((prev) => prev.filter((_, i) => i < prev.length - 1))
-        streamingBufferRef.current = ""
-        setStreamingBuffer("")
-      },
-    })
+    setSending(true)
+    try {
+      const data = await aiApi.chat({ message: text })
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: data.reply, created_at: new Date().toISOString() },
+      ])
+      setRemainingToday(data.remaining_today)
+    } catch (err) {
+      setMessages((prev) => prev.slice(0, -1))
+      if (err instanceof ApiError) {
+        if (err.status === 401) {
+          router.push("/login")
+          return
+        }
+        if (err.status === 403) {
+          toast.error("Premium required to use AI assistant.")
+          return
+        }
+        if (err.status === 429) {
+          const body = err.body as { remaining_today?: number } | undefined
+          const r = body?.remaining_today
+          toast.error(r != null ? `Daily limit reached. ${r} messages left today.` : "Daily message limit exceeded.")
+          return
+        }
+        toast.error(err.message || "Failed to send message.")
+      } else {
+        toast.error("Something went wrong.")
+      }
+    } finally {
+      setSending(false)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -224,7 +220,7 @@ function AiAssistantContent() {
           </div>
           <div>
             <h1 className="text-xl font-semibold text-foreground">AI Assistant</h1>
-            <p className="text-xs text-muted-foreground">Premium · Streams responses</p>
+            <p className="text-xs text-muted-foreground">Premium · Chat</p>
           </div>
         </div>
 
@@ -278,16 +274,12 @@ function AiAssistantContent() {
               )}
               {!historyLoading &&
                 messages.map((m, i) => {
-                  const isLastAssistantStreaming =
-                    isPending && i === messages.length - 1 && m.role === "assistant"
-                  const content = isLastAssistantStreaming ? streamingBuffer : m.content
                   return (
                     <ChatMessage
                       key={m.id ?? `msg-${i}`}
                       role={m.role}
-                      content={content}
+                      content={m.content}
                       timestamp={formatMessageTime(m.created_at)}
-                      isStreaming={isLastAssistantStreaming}
                     />
                   )
                 })}

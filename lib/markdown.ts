@@ -64,6 +64,8 @@ export function normalizeMarkdown(text: string): string {
   // Use (?<!\n) so we do NOT replace when the bullet is already at line start (preserves nested lists like "  - subitem").
   out = out.replace(/(?<!\n)\s+-\s+(?=[A-Z0-9])/g, "\n- ")
   out = out.replace(/(?<!\n)\s+\*(?!\*)\s+/g, "\n* ")
+  // Remove blank line between section heading and first bullet so Markdown parses as nested list (not two separate lists)
+  out = out.replace(/(^|\n)([-*]\s+)?(\*\*[^*]+\*\*|[^:\n]+):\s*\n\n(\s*)([-*]\s)/g, "$1$2$3:\n$4$5")
   out = indentSublistsUnderHeadings(out)
   // Put closing questions on their own line (ID + EN)
   out = out.replace(
