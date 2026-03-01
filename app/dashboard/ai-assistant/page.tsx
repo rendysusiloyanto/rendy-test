@@ -298,7 +298,7 @@ function AiAssistantContent() {
   return (
     <AppShell>
       <div className="flex flex-col h-[calc(100vh-88px)] max-w-6xl mx-auto w-full px-2">
-        <div className="flex items-center justify-between gap-2 mb-4 flex-shrink-0">
+        <div className="flex items-center gap-3 mb-4 flex-shrink-0 flex-wrap">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 shadow-sm">
               <Bot className="h-5 w-5 text-primary" />
