@@ -43,7 +43,7 @@ function indentSublistsUnderHeadings(text: string): string {
       continue
     }
     if (inSubsection && isTopLevelBullet(line)) {
-      out.push("  " + line)
+      out.push("    " + line)
       continue
     }
     // Don't reset on blank line (common between heading and sub-items); only reset on real content that isn't a bullet/heading
