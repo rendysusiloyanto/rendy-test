@@ -12,7 +12,7 @@ import { useAiChatStream } from "@/hooks/use-ai-chat-stream"
 import { ChatMessage } from "@/components/chat-message"
 import { aiApi } from "@/lib/ai-api"
 import { AI_IMAGE_ACCEPT, AI_IMAGE_MAX_BYTES, type AiChatHistoryMessage } from "@/lib/ai-types"
-import { Send, Loader2, ImagePlus, X, Bot, Wrench, Globe, BookOpen, FileCode, ArrowDown, RefreshCw } from "lucide-react"
+import { Send, Loader2, ImagePlus, X, Bot, Wrench, Globe, BookOpen, FileCode, ArrowDown, RefreshCw, PanelLeft, PanelLeftClose } from "lucide-react"
 import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
 import { ApiError } from "@/lib/api"
@@ -47,6 +47,7 @@ function AiAssistantContent() {
   const [historyLoading, setHistoryLoading] = useState(true)
   const [useStreamMode, setUseStreamModeState] = useState(true)
   const [bulkPending, setBulkPending] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const setUseStreamMode = useCallback((value: boolean) => {
     setUseStreamModeState(value)
@@ -68,6 +69,15 @@ function AiAssistantContent() {
     } catch {
       // ignore
     }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mq = window.matchMedia("(min-width: 768px)")
+    if (mq.matches) setSidebarOpen(true)
+    const handler = (e: MediaQueryListEvent) => setSidebarOpen(e.matches)
+    mq.addEventListener("change", handler)
+    return () => mq.removeEventListener("change", handler)
   }, [])
   const [historyError, setHistoryError] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -297,9 +307,21 @@ function AiAssistantContent() {
 
   return (
     <AppShell>
-      <div className="flex h-[calc(100vh-88px)] w-full max-w-7xl mx-auto px-2 gap-3">
-        <aside className="flex-shrink-0 w-40 flex flex-col gap-4 py-4 border-r border-border pr-3">
-          <div className="flex items-center gap-2">
+      <div className="relative flex h-[calc(100vh-88px)] w-full max-w-7xl mx-auto px-2 gap-0">
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            aria-hidden
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        <aside
+          className={`flex-shrink-0 flex flex-col gap-4 py-4 border-r border-border bg-background/95 backdrop-blur-sm transition-[transform,width] duration-200 ease-out z-50
+            fixed md:relative inset-y-0 left-0
+            w-52 md:w-40 md:transition-[width] md:overflow-hidden
+            ${sidebarOpen ? "translate-x-0 md:w-40" : "-translate-x-full md:translate-x-0 md:w-0 md:min-w-0 md:py-0 md:border-r-0 md:opacity-0"}`}
+        >
+          <div className="flex items-center gap-2 px-3 md:pr-3 min-w-[10rem] md:min-w-[8rem]">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 shadow-sm">
               <Bot className="h-5 w-5 text-primary" />
             </div>
@@ -308,7 +330,7 @@ function AiAssistantContent() {
               <p className="text-[11px] text-muted-foreground">Premium</p>
             </div>
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 px-3 min-w-[10rem] md:min-w-[8rem]">
             <span className="text-xs text-muted-foreground font-medium">Chat</span>
             <button
               type="button"
@@ -327,7 +349,19 @@ function AiAssistantContent() {
           </div>
         </aside>
 
-        <div className="flex-1 flex flex-col min-w-0 min-h-0">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
+          <div className="flex items-center gap-2 flex-shrink-0 py-2 md:py-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 rounded-lg border-border"
+              onClick={() => setSidebarOpen((v) => !v)}
+              aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+            >
+              {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
+            </Button>
+          </div>
         <Card className="flex-1 flex flex-col min-h-0 border-border bg-card/80 shadow-lg shadow-black/5 backdrop-blur-sm overflow-hidden">
           <CardContent
             className="relative flex flex-col flex-1 min-h-0 p-0 bg-gradient-to-b from-background/50 to-muted/20"
