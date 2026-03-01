@@ -203,7 +203,7 @@ function AiAssistantContent() {
     textareaRef.current?.focus()
   }, [])
 
-  const MIN_TEXTAREA_HEIGHT = 40
+  const MIN_TEXTAREA_HEIGHT = 44
   const MAX_TEXTAREA_HEIGHT = 128
 
   useEffect(() => {
@@ -523,9 +523,9 @@ function AiAssistantContent() {
               </div>
             )}
 
-            <div className="sticky bottom-0 p-3 pt-2 border-t border-border/80 bg-card/50 backdrop-blur-sm flex-shrink-0">
+            <div className="sticky bottom-0 rounded-t-2xl border-t border-border/60 bg-card/60 backdrop-blur-md flex-shrink-0 p-4 shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.15)]">
               {imageFile && (
-                <div className="flex items-center gap-2 text-sm mb-2">
+                <div className="flex items-center gap-2 text-sm mb-3 rounded-lg bg-muted/40 px-3 py-2">
                   <span className="text-muted-foreground truncate flex-1">
                     {imageFile.name}
                   </span>
@@ -533,14 +533,14 @@ function AiAssistantContent() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-7 w-7 p-0"
+                    className="h-7 w-7 p-0 rounded-lg hover:bg-muted"
                     onClick={() => setImageFile(null)}
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
               )}
-              <div className="flex gap-2 items-end">
+              <div className="flex gap-3 items-end">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -552,17 +552,17 @@ function AiAssistantContent() {
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="flex-shrink-0 border-border h-9 w-9 rounded-xl shadow-sm"
+                  className="flex-shrink-0 border-border/80 h-10 w-10 rounded-xl bg-muted/30 hover:bg-muted/60 hover:border-primary/30 transition-colors"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isPending || historyLoading}
                 >
-                  <ImagePlus className="h-4 w-4" />
+                  <ImagePlus className="h-4 w-4 text-muted-foreground" />
                 </Button>
                 <textarea
                   ref={textareaRef}
                   placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
                   rows={1}
-                  className="flex-1 min-h-[40px] max-h-32 resize-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 leading-relaxed"
+                  className="flex-1 min-h-[44px] max-h-32 resize-none rounded-xl border border-border/80 bg-muted/20 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all duration-200 leading-relaxed shadow-inner"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
@@ -573,7 +573,7 @@ function AiAssistantContent() {
                   onClick={handleSend}
                   disabled={isPending || historyLoading || (!input.trim() && !imageFile)}
                   size="icon"
-                  className="flex-shrink-0 h-9 w-9 rounded-xl shadow-sm"
+                  className="flex-shrink-0 h-10 w-10 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:brightness-110 transition-all duration-200 disabled:opacity-50"
                 >
                   {isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -583,7 +583,7 @@ function AiAssistantContent() {
                 </Button>
               </div>
               {remainingToday != null && (
-                <p className="text-[11px] text-muted-foreground/90 mt-1.5">
+                <p className="text-[11px] text-muted-foreground/80 mt-2.5 px-1">
                   Messages remaining today: {remainingToday}
                 </p>
               )}
