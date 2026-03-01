@@ -30,6 +30,7 @@ const SUGGESTIONS = [
 const SCROLL_THRESHOLD = 80
 /** Parse Markdown every N ms during stream so partial fences get time to complete; when done, final content parses once. */
 const STREAM_RENDER_INTERVAL_MS = 400
+const STREAM_MODE_STORAGE_KEY = "ai-assistant-use-stream"
 
 function formatMessageTime(createdAt: string) {
   return formatDistanceToNow(new Date(createdAt), { addSuffix: true })
@@ -44,8 +45,30 @@ function AiAssistantContent() {
   const [remainingToday, setRemainingToday] = useState<number | null>(null)
   const [showScrollBottom, setShowScrollBottom] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(true)
-  const [useStreamMode, setUseStreamMode] = useState(true)
+  const [useStreamMode, setUseStreamModeState] = useState(true)
   const [bulkPending, setBulkPending] = useState(false)
+
+  const setUseStreamMode = useCallback((value: boolean) => {
+    setUseStreamModeState(value)
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(STREAM_MODE_STORAGE_KEY, value ? "1" : "0")
+      } catch {
+        // ignore
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const stored = localStorage.getItem(STREAM_MODE_STORAGE_KEY)
+      if (stored === "0") setUseStreamModeState(false)
+      else if (stored === "1") setUseStreamModeState(true)
+    } catch {
+      // ignore
+    }
+  }, [])
   const [historyError, setHistoryError] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -299,7 +322,7 @@ function AiAssistantContent() {
               onClick={() => setUseStreamMode(false)}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${!useStreamMode ? "bg-primary text-primary-foreground" : "bg-muted/80 text-muted-foreground hover:bg-muted"}`}
             >
-              Bulk
+              Non-stream
             </button>
           </div>
         </div>
