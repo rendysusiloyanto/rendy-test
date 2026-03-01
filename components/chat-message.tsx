@@ -6,6 +6,14 @@ import remarkBreaks from "remark-breaks"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Bot, User } from "lucide-react"
 
+/** Ensure code fences have required newlines so streamed Markdown parses (```lang + newline, ``` + newline). */
+function ensureMarkdownNewlines(text: string): string {
+  if (!text?.trim()) return text
+  return text
+    .replace(/```(\w+)\s+/g, "```$1\n")
+    .replace(/```\s+/g, "```\n")
+}
+
 interface ChatMessageProps {
   role: "user" | "assistant"
   content: string
@@ -156,11 +164,11 @@ export function ChatMessage({ role, content, timestamp, isStreaming }: ChatMessa
           }`}
         >
           {isUser ? (
-            <p className="text-sm whitespace-pre-wrap leading-5">{content}</p>
+            <p className="text-sm whitespace-pre-wrap leading-5">{content ?? ""}</p>
           ) : (
             <div className="text-[15px] leading-5 prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap prose-headings:font-semibold prose-headings:break-words prose-p:break-words prose-code:font-mono prose-code:before:content-none prose-code:after:content-none [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1">
               <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
-                {content}
+                {ensureMarkdownNewlines(String(content ?? ""))}
               </ReactMarkdown>
             </div>
           )}

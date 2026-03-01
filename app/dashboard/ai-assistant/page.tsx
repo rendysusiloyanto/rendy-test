@@ -28,8 +28,8 @@ const SUGGESTIONS = [
 ]
 
 const SCROLL_THRESHOLD = 80
-/** Throttle Markdown re-renders during stream so partial ** or ``` don't break display (update at most every N ms). */
-const STREAM_RENDER_INTERVAL_MS = 120
+/** Parse Markdown every N ms during stream so partial fences get time to complete; when done, final content parses once. */
+const STREAM_RENDER_INTERVAL_MS = 400
 
 function formatMessageTime(createdAt: string) {
   return formatDistanceToNow(new Date(createdAt), { addSuffix: true })
@@ -186,8 +186,6 @@ function AiAssistantContent() {
           if (last?.role === "assistant") next[next.length - 1] = { ...last, content: finalContent }
           return next
         })
-        streamingBufferRef.current = ""
-        setStreamingBuffer("")
         setRemainingToday(remaining)
       },
       onError: () => {
