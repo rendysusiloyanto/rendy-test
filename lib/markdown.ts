@@ -11,6 +11,39 @@
  * normalizeMarkdown("Berikut fungsi:\n- Memberikan informasi\n- Menjawab pertanyaan")
  * // → "Berikut fungsi:\n\n- Memberikan informasi\n- Menjawab pertanyaan"
  */
+
+function isHeadingBullet(line: string): boolean {
+  return /^\s*[-*]\s+\*\*[^*]+\*\*:\s*$/.test(line.trim())
+}
+
+function isTopLevelBullet(line: string): boolean {
+  if (/^\s/.test(line)) return false
+  if (line.startsWith("- ")) return true
+  if (line.startsWith("* ") && !line.startsWith("* *")) return true
+  return false
+}
+
+function indentSublistsUnderHeadings(text: string): string {
+  const lines = text.split("\n")
+  const out: string[] = []
+  let inSubsection = false
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (isHeadingBullet(line)) {
+      inSubsection = true
+      out.push(line)
+      continue
+    }
+    if (inSubsection && isTopLevelBullet(line)) {
+      out.push("  " + line)
+      continue
+    }
+    inSubsection = false
+    out.push(line)
+  }
+  return out.join("\n")
+}
+
 export function normalizeMarkdown(text: string): string {
   if (!text?.trim()) return text
   let out = text
@@ -22,7 +55,7 @@ export function normalizeMarkdown(text: string): string {
   // Use (?<!\n) so we do NOT replace when the bullet is already at line start (preserves nested lists like "  - subitem").
   out = out.replace(/(?<!\n)\s+-\s+(?=[A-Z0-9])/g, "\n- ")
   out = out.replace(/(?<!\n)\s+\*(?!\*)\s+/g, "\n* ")
-  // Ensure closing question on its own line (fixes streaming where it is appended without newline)
-  out = out.replace(/\.\s*(Apakah ada hal lain[^.?]*[.?])/gi, ".\n\n$1")
+  out = indentSublistsUnderHeadings(out)
+  out = out.replace(/\.\s*(Apakah ada [^.?]*\?)/gi, ".\n\n$1")
   return out
 }
