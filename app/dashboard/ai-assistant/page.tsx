@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { AppShell } from "@/components/app-shell"
 import { AuthGuard } from "@/components/auth-guard"
-import { PremiumGuard } from "@/components/premium-guard"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useAiChatWithImage } from "@/hooks/use-ai-chat"
@@ -599,9 +598,7 @@ function AiAssistantContent() {
 export default function AiAssistantPage() {
   return (
     <AuthGuard>
-      <PremiumGuard>
-        <AiAssistantContent />
-      </PremiumGuard>
+      <AiAssistantContent />
     </AuthGuard>
   )
 }

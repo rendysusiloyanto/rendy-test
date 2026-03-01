@@ -1,7 +1,7 @@
 "use client"
 
 import { axiosClient } from "./axios-client"
-import type { AiAnalyzeResponse, AiChatRequest, AiChatResponse, AiChatHistoryResponse } from "./ai-types"
+import type { AiAnalyzeResponse, AiChatRequest, AiChatResponse, AiChatHistoryResponse, AiChatDailyLimitResponse } from "./ai-types"
 import { ApiError } from "./api"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ""
@@ -29,6 +29,12 @@ export const aiApi = {
   /** GET /api/ai/chat/history - load persistent conversation (one per user). 401 handled by axios interceptor. */
   async getChatHistory(): Promise<AiChatHistoryResponse> {
     const { data } = await axiosClient.get<AiChatHistoryResponse>("/api/ai/chat/history")
+    return data
+  },
+
+  /** GET /api/ai/chat/limit - daily message limit (5 non-premium, 30 premium). */
+  async getChatDailyLimit(): Promise<AiChatDailyLimitResponse> {
+    const { data } = await axiosClient.get<AiChatDailyLimitResponse>("/api/ai/chat/limit")
     return data
   },
 

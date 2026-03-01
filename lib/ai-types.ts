@@ -33,6 +33,13 @@ export interface AiChatHistoryResponse {
   messages: AiChatHistoryMessage[]
 }
 
+/** GET /api/ai/chat/limit - daily limit for current user (5 non-premium, 30 premium) */
+export interface AiChatDailyLimitResponse {
+  limit: number
+  used_today: number
+  remaining_today: number
+}
+
 /** Error body when limit exceeded or forbidden */
 export interface AiErrorBody {
   detail?: string | { message?: string; remaining_today?: number }
