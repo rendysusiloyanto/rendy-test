@@ -180,14 +180,16 @@ function AiAssistantContent() {
           streamThrottleRef.current = null
         }
         const finalContent = streamingBufferRef.current
-        setStreamingBuffer(finalContent)
+        setStreamingBuffer("")
+        streamingBufferRef.current = ""
+        setRemainingToday(remaining)
         setMessages((prev) => {
           const next = [...prev]
           const last = next[next.length - 1]
           if (last?.role === "assistant") next[next.length - 1] = { ...last, content: finalContent }
           return next
         })
-        setRemainingToday(remaining)
+        aiApi.getChatHistory().then((res) => setMessages(res.messages)).catch(() => {})
       },
       onError: () => {
         if (streamThrottleRef.current) {
