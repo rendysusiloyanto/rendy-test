@@ -189,7 +189,6 @@ function AiAssistantContent() {
           if (last?.role === "assistant") next[next.length - 1] = { ...last, content: finalContent }
           return next
         })
-        aiApi.getChatHistory().then((res) => setMessages(res.messages)).catch(() => {})
       },
       onError: () => {
         if (streamThrottleRef.current) {
