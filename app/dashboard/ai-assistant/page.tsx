@@ -414,7 +414,7 @@ function AiAssistantContent() {
           >
             <div
               ref={scrollRef}
-              className="chat-scroll-area flex-1 overflow-y-auto py-6 px-1"
+              className="chat-scroll-area flex-1 overflow-y-auto py-6 px-4"
             >
               <div className="w-full space-y-6">
               {historyLoading && (
