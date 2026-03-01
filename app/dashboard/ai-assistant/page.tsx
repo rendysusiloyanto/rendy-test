@@ -28,6 +28,8 @@ const SUGGESTIONS = [
 ]
 
 const SCROLL_THRESHOLD = 80
+/** Throttle Markdown re-renders during stream so partial ** or ``` don't break display (update at most every N ms). */
+const STREAM_RENDER_INTERVAL_MS = 120
 
 function formatMessageTime(createdAt: string) {
   return formatDistanceToNow(new Date(createdAt), { addSuffix: true })
@@ -47,6 +49,8 @@ function AiAssistantContent() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const streamingBufferRef = useRef("")
+  const streamThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const streamLastFlushRef = useRef(0)
 
   const chatStream = useAiChatStream()
   const chatWithImage = useAiChatWithImage()
@@ -158,9 +162,23 @@ function AiAssistantContent() {
     chatStream.startStream(text, {
       onDelta: (delta) => {
         streamingBufferRef.current += delta
-        setStreamingBuffer(streamingBufferRef.current)
+        const now = Date.now()
+        if (now - streamLastFlushRef.current >= STREAM_RENDER_INTERVAL_MS) {
+          streamLastFlushRef.current = now
+          setStreamingBuffer(streamingBufferRef.current)
+        } else if (!streamThrottleRef.current) {
+          streamThrottleRef.current = setTimeout(() => {
+            streamThrottleRef.current = null
+            streamLastFlushRef.current = Date.now()
+            setStreamingBuffer(streamingBufferRef.current)
+          }, STREAM_RENDER_INTERVAL_MS - (now - streamLastFlushRef.current))
+        }
       },
       onDone: (remaining) => {
+        if (streamThrottleRef.current) {
+          clearTimeout(streamThrottleRef.current)
+          streamThrottleRef.current = null
+        }
         const finalContent = streamingBufferRef.current
         setMessages((prev) => {
           const next = [...prev]
@@ -173,6 +191,10 @@ function AiAssistantContent() {
         setRemainingToday(remaining)
       },
       onError: () => {
+        if (streamThrottleRef.current) {
+          clearTimeout(streamThrottleRef.current)
+          streamThrottleRef.current = null
+        }
         setMessages((prev) => prev.filter((_, i) => i < prev.length - 1))
         streamingBufferRef.current = ""
         setStreamingBuffer("")
